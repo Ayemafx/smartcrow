@@ -1,90 +1,261 @@
 "use client";
-const axios = require('axios');
 import PopupInfo from '@/components/popupinfo';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PeraWalletConnect } from "@perawallet/connect";
 
-const zillowurl='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&documentType=grant&recordingDate.gt=2015-01-01&parcels.apn=';
 const zillowurladdress='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&parcels.apn=';
-
-
 const peraWallet = new PeraWalletConnect();
-
-const formatLongString = (str) => {
-	if (str.length > 6) {
-	  return str.slice(0, 3) + '...' + str.slice(-3);
-	}
-	return str;
-};
-
+const axios = require('axios');
+const algosdk = require('algosdk');
+const myabi = {
+    "name": "Sender Funds Contract with Beaker",
+    "methods": [
+        {
+            "name": "createFundsInfo",
+            "args": [
+                {
+                    "type": "pay",
+                    "name": "pay"
+                },
+                {
+                    "type": "string",
+                    "name": "propertyNumber"
+                },
+                {
+                    "type": "address",
+                    "name": "Receiver"
+                },
+                {
+                    "type": "uint64",
+                    "name": "startDate"
+                },
+                {
+                    "type": "uint64",
+                    "name": "endDate"
+                },
+                {
+                    "type": "bool",
+                    "name": "haveExpectedSalesPrice"
+                },
+                {
+                    "type": "uint64",
+                    "name": "expectedSalesPrice"
+                }
+            ],
+            "returns": {
+                "type": "void"
+            }
+        },
+        {
+            "name": "updateSenderFundsItem",
+            "args": [
+                {
+                    "type": "string",
+                    "name": "item_name"
+                },
+                {
+                    "type": "bool",
+                    "name": "propertySold"
+                },
+                {
+                    "type": "bool",
+                    "name": "meetSalesCondition"
+                },
+                {
+                    "type": "bool",
+                    "name": "postDeadlineCheck"
+                }
+            ],
+            "returns": {
+                "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+            }
+        },
+        {
+            "name": "readItem",
+            "args": [
+                {
+                    "type": "string",
+                    "name": "item_name"
+                }
+            ],
+            "returns": {
+                "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+            }
+        },
+        {
+            "name": "WithdrawFundsForReceiver",
+            "args": [
+                {
+                    "type": "string",
+                    "name": "item_name"
+                }
+            ],
+            "returns": {
+                "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+            }
+        },
+        {
+            "name": "WithdrawFundsForSender",
+            "args": [
+                {
+                    "type": "string",
+                    "name": "item_name"
+                }
+            ],
+            "returns": {
+                "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+            }
+        }
+    ],
+    "networks": {}
+}
 
 const removeLeadingTrailingBlanksAndDashes = async (str) => {
 	// Remove leading and trailing blanks and dashes
 	const trimmedStr = str.replace(/(^\s+)|(\s+$)/g, '').replace(/(^-+)|(-+$)/g, '');
-	
 	// Remove dashes within the string
 	const finalStr = trimmedStr.replace(/-/g, '');
-	
 	return finalStr;
 };
+//290-15-153
+
+const fetch = async(APN) => {
+	peraWallet
+		.reconnectSession()
+		.then((accounts) => {
+			if (peraWallet.isConnected) {
+				const server = "https://testnet-algorand.api.purestake.io/ps2";
+				const port = "";
+				const token = {
+					'X-API-Key': '<YOUR API KEY>'
+				}
+
+				// create an algod client
+				let algodClient = new algosdk.Algodv2(token, server, port);
+
+				// define account parameters
+				const senderMnemonic = "<YOUR SENDER MNEMONIC>";
+				const senderAccount = algosdk.mnemonicToSecretKey(senderMnemonic);
+
+				// define smart contract parameters
+				const appId = "";
+				const methodName = "increment";
+				const methodArgs = []; // no method args needed here
+
+				async function waitForConfirmation(txId) {
+					let status = await algodClient.status().do();
+					let lastRound = status["last-round"];
+					while (true) {
+						const pendingInfo = await algodClient.pendingTransactionInformation(txId).do();
+						if (pendingInfo["confirmed-round"] !== null && pendingInfo["confirmed-round"] > 0) {
+							console.log("Transaction " + txId + " confirmed in round " + pendingInfo["confirmed-round"]);
+							break;
+						}
+						lastRound++;
+						await algodClient.statusAfterBlock(lastRound).do();
+					}
+				};
+
+				// call smart contract
+				async function callApp() {
+					// get node suggested parameters
+					let params = await algodClient.getTransactionParams().do();
+
+					// create an instance of AtomicTransactionComposer
+					let atc = new algosdk.AtomicTransactionComposer();
+
+					// add a method call to the composer
+					atc.addMethodCall({
+						appId: appId,
+						method: methodName,
+						methodArgs: methodArgs,
+						sender: senderAccount.addr,
+						suggestedParams: params,
+						signer: senderAccount.sk
+					});
+
+					// execute the composer
+					let results = await atc.execute(algodClient);
+
+					// send transaction
+					txId = results.txIds[0];
+					console.log("Calling app with id: " + txId);
+					await algodClient.sendRawTransaction(results.signedTxs).do();
+
+					// wait for confirmation
+					await waitForConfirmation(txId);
+
+					console.log("Called app with id: " + appId);
+				};
+			}
+		})
+		.catch((e) => console.log(e));
+    
+    var activeflag = false
+    console.log('Active flag = '+activeflag);
+    return activeflag;
+}
+
+
 export default function Home() {
-  	const [isLoggedin, setLoggedin] = useState(false);
 	const [APN, setAPN] = useState("APN number");
 	const [APNaddress, setAPNAddress] = useState("Address to be checked");
-	const [APNaddresscheck, setAPNAddresscheck] = useState("");
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [buttonNewContract,setbuttonNewContract] = useState(true);
 	const [buttonExistingContract,setbuttonExistingContract] = useState(true);
   	const [accountAddress, setAccountAddress] = useState(null);
   	const isConnectedToPeraWallet = !!accountAddress;
+  	const router = useRouter();
 
-  const router = useRouter();
+	useEffect(() => {
+		// Reconnect to the session when the component is mounted
+		peraWallet
+		.reconnectSession()
+		.then((accounts) => {
+			if (peraWallet.isConnected) {
+			peraWallet.connector.on("disconnect", disconnect);
+			}
+			
+			if (accounts.length) {
+				console.log(accounts[0])
+				setAccountAddress(accounts[0]);
+			}
+		})
+		.catch((e) => console.log(e));
+	}, []);
 
-  useEffect(() => {
-    // Reconnect to the session when the component is mounted
-    peraWallet
-      .reconnectSession()
-      .then((accounts) => {
-        if (peraWallet.isConnected) {
-          peraWallet.connector.on("disconnect", disconnect);
-        }
-  
-        if (accounts.length) {
-          setAccountAddress(accounts[0]);
-        }
-      })
-      .catch((e) => console.log(e));
-  }, []);
+	const disconnect = async () => {
+		peraWallet.disconnect();
+		setAccountAddress(null);
+	}
 
-  const disconnect = async () => {
-    peraWallet.disconnect();
+  	const login = async () => {
+		peraWallet
+			.connect()
+			.then((newAccounts) => {
+			peraWallet.connector.on("disconnect", disconnect);
 
-    setAccountAddress(null);
-  }
+			setAccountAddress(newAccounts[0]);
+			})
+			.catch((error) => {
+			if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
+				console.log(error);
+			}
+		});
+	}
 
-  const fetch = async(APN) => {
-    return false // change to true if you want existing contract, false for creating new contract
-  }
+	const handleClickBalloon = () => {
+		setBalloonText('Check the address of the given APN. If there is no active contract on the given APN, you can create a new contract. If there is an active contract, you can check the details of the existing contract.');
+		setShowBalloon(true);
+	}
 
+	const handleCloseBalloon = () => {
+		setShowBalloon(false);
+	};
 
-  const login = async () => {
-	peraWallet
-    .connect()
-    .then((newAccounts) => {
-      peraWallet.connector.on("disconnect", disconnect);
-
-      setAccountAddress(newAccounts[0]);
-    })
-    .catch((error) => {
-      if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
-        console.log(error);
-      }
-    });
-}
-
-  const handleExistingContract = async() => {
+	const handleExistingContract = async() => {
 		var data = document.getElementById("myAPNInput").value;
 		data = await removeLeadingTrailingBlanksAndDashes(data);
 		const data2 = document.getElementById("addresscheck").value;
@@ -93,10 +264,6 @@ export default function Home() {
 		}
 		else {router.push(`/existingContract?SelAPN=${data}&Address=${data2}`);}
 	};
-
-	const handleCloseBalloon = () => {
-    setShowBalloon(false);
-  };
 
 	const handleNewContract = async() => {
 		var data = document.getElementById("myAPNInput").value;
@@ -107,11 +274,6 @@ export default function Home() {
 		}
 		else {router.push(`/newContract?SelAPN=${data}&Address=${data2}`);}
 	};
-
-  const handleClickBalloon = () => {
-		setBalloonText('Check the address of the given APN. If there is no active contract on the given APN, you can create a new contract. If there is an active contract, you can check the details of the existing contract.');
-		setShowBalloon(true);
-	}
 
 	const checkaddress = async()=>{
 		var myAPN = document.getElementById("myAPNInput").value;
@@ -124,12 +286,10 @@ export default function Home() {
 		console.log(result);
 		var resultdate2 = await result['data']['bundle'][0]['parcels'][0]['full'];
 		console.log(resultdate2);
-		
 		setAPNAddress(resultdate2);
 		console.log(APNaddress);
 		const myText = document.getElementById("addresscheck");
 		myText.value = resultdate2;
-
 		var buttonresult = await fetch(myAPN);
 		console.log("buttonresult = "+buttonresult)
 		if (buttonresult) {
@@ -140,7 +300,6 @@ export default function Home() {
 			setbuttonNewContract(false);
 			setbuttonExistingContract(true);
 		}
-		
 	} 
 
   return (
