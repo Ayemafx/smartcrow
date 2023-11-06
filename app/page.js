@@ -3,11 +3,11 @@ import PopupInfo from '@/components/popupinfo';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PeraWalletConnect } from "@perawallet/connect";
+import * as algosdk from 'algosdk'
 
 const zillowurladdress='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&parcels.apn=';
 const peraWallet = new PeraWalletConnect();
 const axios = require('axios');
-const algosdk = require('algosdk');
 const myabi = {
     "name": "Sender Funds Contract with Beaker",
     "methods": [
@@ -84,6 +84,18 @@ const myabi = {
             }
         },
         {
+            "name": "readFundsWithdrawnStatus",
+            "args": [
+                {
+                    "type": "string",
+                    "name": "item_name"
+                }
+            ],
+            "returns": {
+                "type": "bool"
+            }
+        },
+        {
             "name": "WithdrawFundsForReceiver",
             "args": [
                 {
@@ -119,87 +131,61 @@ const removeLeadingTrailingBlanksAndDashes = async (str) => {
 	return finalStr;
 };
 //290-15-153
+async function callContract(APN, account) {
+	const algodToken = '';
+	const algodServer = 'https://testnet-api.algonode.cloud';
+	const algodPort = undefined;
+	const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
 
-const fetch = async(APN) => {
-	peraWallet
-		.reconnectSession()
-		.then((accounts) => {
-			if (peraWallet.isConnected) {
-				const server = "https://testnet-algorand.api.purestake.io/ps2";
-				const port = "";
-				const token = {
-					'X-API-Key': '<YOUR API KEY>'
-				}
+	let accountInfo = await algodClient.accountInformation(account).do();
 
-				// create an algod client
-				let algodClient = new algosdk.Algodv2(token, server, port);
+  	console.log('accountInfo:', accountInfo);
 
-				// define account parameters
-				const senderMnemonic = "<YOUR SENDER MNEMONIC>";
-				const senderAccount = algosdk.mnemonicToSecretKey(senderMnemonic);
+	const waitForBalance = async () => {
+		accountInfo = await algodClient.accountInformation(account).do();
+	
+		const balance = accountInfo.amount;
+	
+		if (balance === 0) {
+		  await waitForBalance();
+		}
+	};
 
-				// define smart contract parameters
-				const appId = "";
-				const methodName = "increment";
-				const methodArgs = []; // no method args needed here
+	await waitForBalance();
 
-				async function waitForConfirmation(txId) {
-					let status = await algodClient.status().do();
-					let lastRound = status["last-round"];
-					while (true) {
-						const pendingInfo = await algodClient.pendingTransactionInformation(txId).do();
-						if (pendingInfo["confirmed-round"] !== null && pendingInfo["confirmed-round"] > 0) {
-							console.log("Transaction " + txId + " confirmed in round " + pendingInfo["confirmed-round"]);
-							break;
-						}
-						lastRound++;
-						await algodClient.statusAfterBlock(lastRound).do();
-					}
-				};
+	console.log(`${account} funded!`);
 
-				// call smart contract
-				async function callApp() {
-					// get node suggested parameters
-					let params = await algodClient.getTransactionParams().do();
+	const suggestedParams = await algodClient.getTransactionParams().do();
+  	console.log('suggestedParams:', suggestedParams);
 
-					// create an instance of AtomicTransactionComposer
-					let atc = new algosdk.AtomicTransactionComposer();
+	const contract = new algosdk.ABIContract(myabi);
+	const atc = new algosdk.AtomicTransactionComposer();
 
-					// add a method call to the composer
-					atc.addMethodCall({
-						appId: appId,
-						method: methodName,
-						methodArgs: methodArgs,
-						sender: senderAccount.addr,
-						suggestedParams: params,
-						signer: senderAccount.sk
-					});
-
-					// execute the composer
-					let results = await atc.execute(algodClient);
-
-					// send transaction
-					txId = results.txIds[0];
-					console.log("Calling app with id: " + txId);
-					await algodClient.sendRawTransaction(results.signedTxs).do();
-
-					// wait for confirmation
-					await waitForConfirmation(txId);
-
-					console.log("Called app with id: " + appId);
-				};
+	atc.addMethodCall({
+		appID: 468709015,
+		method: algosdk.getMethodByName(contract.methods, 'readFundsWithdrawnStatus'),
+		sender: account,
+		suggestedParams,
+		signer: async (unsignedTxns) => {
+			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
+			return await peraWallet.signTransaction([txnGroups]);
+		},
+		methodArgs: ["123456"],
+		boxes: [
+			{
+				appIndex: 468709015,
+				name: new Uint8Array(Buffer.from('123456'))
 			}
-		})
-		.catch((e) => console.log(e));
-    
-    var activeflag = false
-    console.log('Active flag = '+activeflag);
-    return activeflag;
+		],
+	});
+
+	const results = await atc.execute(algodClient, 3);
+  	console.log(`Contract read success ` + results.methodResults[0].returnValue);
+	return results.methodResults[0].returnValue
 }
 
 
 export default function Home() {
-	const [APN, setAPN] = useState("APN number");
 	const [APNaddress, setAPNAddress] = useState("Address to be checked");
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
@@ -215,11 +201,10 @@ export default function Home() {
 		.reconnectSession()
 		.then((accounts) => {
 			if (peraWallet.isConnected) {
-			peraWallet.connector.on("disconnect", disconnect);
+				peraWallet.connector.on("disconnect", disconnect);
 			}
 			
 			if (accounts.length) {
-				console.log(accounts[0])
 				setAccountAddress(accounts[0]);
 			}
 		})
@@ -235,9 +220,8 @@ export default function Home() {
 		peraWallet
 			.connect()
 			.then((newAccounts) => {
-			peraWallet.connector.on("disconnect", disconnect);
-
-			setAccountAddress(newAccounts[0]);
+				peraWallet.connector.on("disconnect", disconnect);
+				setAccountAddress(newAccounts[0]);
 			})
 			.catch((error) => {
 			if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
@@ -254,6 +238,37 @@ export default function Home() {
 	const handleCloseBalloon = () => {
 		setShowBalloon(false);
 	};
+
+	async function fetch(APN) {
+		var activeflag = null;
+
+		peraWallet
+		.reconnectSession()
+		.then((accounts) => {
+			if (peraWallet.isConnected) {
+				callContract(APN, accounts[0]).then((res) => {
+				activeflag = res;
+
+				// Now, update your application state or perform actions based on activeflag.
+				if (activeflag) {
+					setbuttonExistingContract(false);
+					setbuttonNewContract(true);
+				} else if (activeflag === false) {
+					setbuttonNewContract(false);
+					setbuttonExistingContract(true);
+				}
+				else {
+					alert("Invalid APN")
+				}
+			});
+			}
+			else {
+				login();
+			}
+		})
+		.catch((e) => console.log(e));
+
+	}
 
 	const handleExistingContract = async() => {
 		var data = document.getElementById("myAPNInput").value;
@@ -279,7 +294,6 @@ export default function Home() {
 		var myAPN = document.getElementById("myAPNInput").value;
 		myAPN = await removeLeadingTrailingBlanksAndDashes(myAPN);
 		console.log('myAPN = '+myAPN);
-		setAPN(myAPN);
 		var finalurl=zillowurladdress+myAPN;
 		console.log(finalurl);
 		var result = await axios.get(finalurl);
@@ -290,16 +304,7 @@ export default function Home() {
 		console.log(APNaddress);
 		const myText = document.getElementById("addresscheck");
 		myText.value = resultdate2;
-		var buttonresult = await fetch(myAPN);
-		console.log("buttonresult = "+buttonresult)
-		if (buttonresult) {
-			setbuttonExistingContract(false);
-			setbuttonNewContract(true);
-		}
-		else {
-			setbuttonNewContract(false);
-			setbuttonExistingContract(true);
-		}
+		await fetch(myAPN);
 	} 
 
   return (
@@ -325,7 +330,7 @@ export default function Home() {
 			  className="w-60 bg-default-bg rounded px-4 py-2 focus:outline-none m-2 border border-default-border"
 			  placeholder="Paste APN here..."
 			/>
-			
+
 			</section>
 			<section className="flex items-center mb-8">
 			<button
