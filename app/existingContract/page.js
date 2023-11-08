@@ -3,265 +3,479 @@ import { useState, useEffect } from 'react';
 import Popup from '@/components/popup';
 import PopupSuccess from '@/components/popupsuccess';
 import { PeraWalletConnect } from "@perawallet/connect";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import * as algosdk from 'algosdk'
 
 const zillowurl='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&documentType=grant&recordingDate.gt=2015-01-01&parcels.apn=';
-const zillowurladdress='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&parcels.apn=';
-
-
-const {ethers} = require('ethers');
 const axios = require('axios');
-//Test Value
-//const APN = "290-15-153";
-//
-
 const peraWallet = new PeraWalletConnect();
-
-var provider;
-var MyContract;
-var MyContractwSigner;
-
-var seller;
-var realtor;
-var contractamount = 1;
-var sellbydate;
-var startdate;
-var activeflag;
-
-
-const fetch = async(APN) => {
-	
-	var resultarray=[];
-
-    resultarray[0]="ss";
-    resultarray[1]="realtor";
-    var resultdate = new Date();
-    startdate = new Date()*36000000;
-    resultarray[2]="startdate";
-    console.log('Startdate = '+startdate);
-    var resultdate2 = new Date();
-    sellbydate = new Date();
-    resultarray[3]="sellbydate";
-    console.log('Sellby = '+sellbydate);
-    resultarray[4]="contractamount";
-    resultarray[5] = "activeflag";
-
-    return resultarray;
-}
-
-const withdrawseller = async(APN) => {
-	console.log('Withdraw funds');
-	const today = new Date();
-	console.log('Today = '+today);
-	const todaytimestamp = Math.floor(today.getTime()/1000);
-	console.log('Today timestamp = '+todaytimestamp);
-	var finalurl=zillowurl+APN;
-	var result = await axios.get(finalurl);
-	console.log('Total = '+result['data']['total']);
-	try{
-		var resultdate=result['data']['bundle'][0]['recordingDate'];
-	}
-	catch{
-		var resultdate='1/1/2000'
-	}
-	
-	var resultdate2 = new Date(resultdate);
-	
-	var resulttimestamp = Math.floor(resultdate2.getTime()/1000);
-	
-	console.log(resulttimestamp);
-	
-	if (typeof window.ethereum !== 'undefined') {
-        console.log('Metamask is installed!');
-        
-    }
-    var myprovider = window.ethereum;
-    
-    const accounts = await window.ethereum.send(
-        "eth_requestAccounts"
-      )
-      
-      const address = accounts.result[0];
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner(address);
-
-      MyContract = new ethers.Contract(NFTcontract, myabi, provider);
-
-      MyContractwSigner = await MyContract.connect(signer);
-	  var myactive = await MyContract.getBonusActive(APN);
-	  var mystartdate = await MyContract.getBonusstartdate(APN);
-	  var mysellbydate = await MyContract.getBonussellbydate(APN);
-	  //var myslackdate = mysellbydate + (30*24*3600);
-	  var myslackdate = parseInt(mysellbydate, 10) + (30*24*3600);
-      console.log('sellbydate = '+mysellbydate);
-	  console.log('slackdate = '+myslackdate);
-		//Do initial checks
-		if (todaytimestamp<myslackdate) {
-			console.log('slack time not yet passed');
-        
-        	return 4;
-		}
-		else if (myactive==false){
-			console.log('contract no longer active');
-        
-        	return 3;
-		}
-		else if (resulttimestamp<mysellbydate && resulttimestamp>mystartdate){
-			console.log('Property sold on time');
-			return 5;
-		}
-		
-		else {
-			try{
-			var receipt = await MyContractwSigner.sellerwithdraw(APN,resulttimestamp)
-			console.log(receipt);
-			return 9;
-			}
-			
-			catch{
-				console.log('Action cancelled');
-			}
-			//return 9;
-		}
-}
-
-const withdrawrealtor = async(APN) =>{
-	console.log('Withdraw funds');
-	
-	var finalurl=zillowurl+APN;
-	var result = await axios.get(finalurl);
-	
-	try{
-		var resultdate=result['data']['bundle'][0]['recordingDate'];
-	}
-	catch{
-		var resultdate='1/1/2000'
-	}
-	//resultdate=resultdate.substring(0, resultdate.indexOf('T'))
-	var resultdate2 = new Date(resultdate);
-	var resulttimestamp = Math.floor(resultdate2.getTime()/1000);
-	
-	console.log('Timestamp = '+resulttimestamp);
-	
-	if (typeof window.ethereum !== 'undefined') {
-        console.log('Metamask is installed!');
-        
-    }
-    var myprovider = window.ethereum;
-    
-    const accounts = await window.ethereum.send(
-        "eth_requestAccounts"
-      )
-      
-      const address = accounts.result[0];
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner(address);
-
-      MyContract = new ethers.Contract(NFTcontract, myabi, provider);
-
-      MyContractwSigner = await MyContract.connect(signer);
-	  var myactive = await MyContract.getBonusActive(APN);
-      var mystartdate = await MyContract.getBonusstartdate(APN);
-      console.log('startdate = '+mystartdate);
-      var mysellbydate = await MyContract.getBonussellbydate(APN);
-      console.log('sellbydate = '+mysellbydate);
-        
-      if (resulttimestamp < mystartdate) {
-        console.log('record date earlier than startdate');
-        
-        return 1;
+const myabi = {
+  "name": "Sender Funds Contract with Beaker",
+  "methods": [
+      {
+          "name": "createFundsInfo",
+          "args": [
+              {
+                  "type": "pay",
+                  "name": "pay"
+              },
+              {
+                  "type": "string",
+                  "name": "propertyNumber"
+              },
+              {
+                  "type": "address",
+                  "name": "Receiver"
+              },
+              {
+                  "type": "uint64",
+                  "name": "startDate"
+              },
+              {
+                  "type": "uint64",
+                  "name": "endDate"
+              },
+              {
+                  "type": "bool",
+                  "name": "haveExpectedSalesPrice"
+              },
+              {
+                  "type": "uint64",
+                  "name": "expectedSalesPrice"
+              }
+          ],
+          "returns": {
+              "type": "void"
+          }
+      },
+      {
+          "name": "updateSenderFundsItem",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              },
+              {
+                  "type": "bool",
+                  "name": "propertySold"
+              },
+              {
+                  "type": "bool",
+                  "name": "meetSalesCondition"
+              },
+              {
+                  "type": "bool",
+                  "name": "postDeadlineCheck"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "readItem",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "readFundsWithdrawnStatus",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "bool"
+          }
+      },
+      {
+          "name": "WithdrawFundsForReceiver",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "WithdrawFundsForSender",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
       }
-
-      else if (resulttimestamp > mysellbydate) {
-        console.log('record date later than sellbydate');
-        return 2;
-      }
-      
-	  else if (myactive==false){
-			console.log('contract no longer active');
-        
-        	return 3;
-	  }
-
-      else {
-		try{
-	    var receipt = await MyContractwSigner.realtorwithdraw(APN,resulttimestamp);
-		console.log(receipt);
-		return 9;}
-		catch{
-			console.log('Action cancelled');
-		}
-		
-		//return 9;
-    }
+  ],
+  "networks": {}
 }
+
+
+async function callContract(APN, account) {
+	const algodToken = '';
+	const algodServer = 'https://testnet-api.algonode.cloud';
+	const algodPort = undefined;
+	const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+
+	let accountInfo = await algodClient.accountInformation(account).do();
+
+  console.log('accountInfo:', accountInfo);
+
+	const waitForBalance = async () => {
+		accountInfo = await algodClient.accountInformation(account).do();
+	
+		const balance = accountInfo.amount;
+	
+		if (balance === 0) {
+		  await waitForBalance();
+		}
+	};
+
+	await waitForBalance();
+
+	console.log(`${account} funded!`);
+
+	const suggestedParams = await algodClient.getTransactionParams().do();
+  	console.log('suggestedParams:', suggestedParams);
+
+	const contract = new algosdk.ABIContract(myabi);
+	const atc = new algosdk.AtomicTransactionComposer();
+
+	atc.addMethodCall({
+		appID: 469360340,
+		method: algosdk.getMethodByName(contract.methods, 'readItem'),
+		sender: account,
+		suggestedParams,
+		signer: async (unsignedTxns) => {
+			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
+			return await peraWallet.signTransaction([txnGroups]);
+		},
+		methodArgs: ["123456789"], // change to APN in production
+		boxes: [
+			{
+				appIndex: 469360340,
+				name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
+			}
+		],
+	});
+
+	const results = await atc.execute(algodClient, 3);
+  const resultsArray = results.methodResults[0].returnValue
+  console.log(`Contract read success ` + results.methodResults[0].returnValue);
+	return resultsArray
+}
+
+async function withdrawSenderPera(APN, account) {
+	const algodToken = '';
+	const algodServer = 'https://testnet-api.algonode.cloud';
+	const algodPort = undefined;
+	const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+
+	let accountInfo = await algodClient.accountInformation(account).do();
+
+  	console.log('accountInfo:', accountInfo);
+
+	const waitForBalance = async () => {
+		accountInfo = await algodClient.accountInformation(account).do();
+	
+		const balance = accountInfo.amount;
+	
+		if (balance === 0) {
+		  await waitForBalance();
+		}
+	};
+
+	await waitForBalance();
+
+	console.log(`${account} funded!`);
+
+	const suggestedParams = await algodClient.getTransactionParams().do();
+  	console.log('suggestedParams:', suggestedParams);
+
+	const contract = new algosdk.ABIContract(myabi);
+	const atc = new algosdk.AtomicTransactionComposer();
+
+	atc.addMethodCall({
+		appID: 469360340,
+		method: algosdk.getMethodByName(contract.methods, 'WithdrawFundsForSender'),
+		sender: account,
+		suggestedParams,
+		signer: async (unsignedTxns) => {
+			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
+			return await peraWallet.signTransaction([txnGroups]);
+		},
+		methodArgs: ["123456789"], // change to APN in production
+		boxes: [
+			{
+				appIndex: 469360340,
+				name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
+			}
+		],
+	});
+
+	const results = await atc.execute(algodClient, 3);
+  const resultsArray = results.methodResults[0].returnValue
+  console.log(`Contract read success ` + results.methodResults[0].returnValue);
+	return resultsArray
+}
+
+async function withdrawReceiverPera(APN, account) {
+	const algodToken = '';
+	const algodServer = 'https://testnet-api.algonode.cloud';
+	const algodPort = undefined;
+	const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+
+	let accountInfo = await algodClient.accountInformation(account).do();
+
+  	console.log('accountInfo:', accountInfo);
+
+	const waitForBalance = async () => {
+		accountInfo = await algodClient.accountInformation(account).do();
+	
+		const balance = accountInfo.amount;
+	
+		if (balance === 0) {
+		  await waitForBalance();
+		}
+	};
+
+	await waitForBalance();
+
+	console.log(`${account} funded!`);
+
+	const suggestedParams = await algodClient.getTransactionParams().do();
+  	console.log('suggestedParams:', suggestedParams);
+
+	const contract = new algosdk.ABIContract(myabi);
+	const atc = new algosdk.AtomicTransactionComposer();
+
+	atc.addMethodCall({
+		appID: 469360340,
+		method: algosdk.getMethodByName(contract.methods, 'WithdrawFundsForReceiver'),
+		sender: account,
+		suggestedParams,
+		signer: async (unsignedTxns) => {
+			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
+			return await peraWallet.signTransaction([txnGroups]);
+		},
+		methodArgs: ["123456789"], // change to APN in production
+		boxes: [
+			{
+				appIndex: 469360340,
+				name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
+			}
+		],
+	});
+
+	const results = await atc.execute(algodClient, 3);
+  const resultsArray = results.methodResults[0].returnValue
+  console.log(`Contract read success ` + results.methodResults[0].returnValue);
+	return resultsArray
+}
+
 
 const formatLongString = (str) => {
 	if (str.length > 6) {
 	  return str.slice(0, 3) + '...' + str.slice(-3);
 	}
 	return str;
-  };
+};
 
 const MyPage = () => {
-    const [aseller, setSeller] = useState("");
-    const [arealtor, setRealtor] = useState("");
-    const [acontractamount, setAmount] = useState("");
-    const [asellbydate, setSellbydate] = useState("");
-    const [astartdate, setStartdate] = useState("");
-    const [aactiveflag, setActiveFlag] = useState("");
-    const [showPopup, setShowPopup] = useState(false);
-	  const [showPopupSuccess, setShowPopupSuccess] = useState(false);
-    const [popupHeader, setPopupHeader] = useState("");
-	  const [popupHeaderSuccess, setPopupHeaderSuccess] = useState("");
-    const [popupText, setPopupText] = useState("");
-    const [accountAddress, setAccountAddress] = useState(null);
-  	const isConnectedToPeraWallet = !!accountAddress;
+  const [aseller, setSeller] = useState("");
+  const [arealtor, setRealtor] = useState("");
+  const [acontractamount, setAmount] = useState("");
+  const [asellbydate, setSellbydate] = useState("");
+  const [astartdate, setStartdate] = useState("");
+  const [aactiveflag, setActiveFlag] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+	const [showPopupSuccess, setShowPopupSuccess] = useState(false);
+  const [popupHeader, setPopupHeader] = useState("");
+	const [popupHeaderSuccess, setPopupHeaderSuccess] = useState("");
+  const [popupText, setPopupText] = useState("");
+  const [accountAddress, setAccountAddress] = useState(null);
+  const isConnectedToPeraWallet = !!accountAddress;
 
   const searchParams = useSearchParams()
   const APN = searchParams.get('SelAPN');
 	console.log('APN = '+APN);
 	const Address = searchParams.get('Address');
   console.log('APN = '+Address);
+
+  var notTwice = true;
 	
 
-  useEffect(()=>{
-    handleUpdate();
-		// Reconnect to the session when the component is mounted
-    peraWallet
-      .reconnectSession()
-      .then((accounts) => {
-        if (peraWallet.isConnected) {
-          peraWallet.connector.on("disconnect", disconnect);
-        }
-  
-        if (accounts.length) {
-          setAccountAddress(accounts[0]);
-        }
-      })
-      .catch((e) => console.log(e));
-        
-  })
+  useEffect(() => {
+		peraWallet
+			.reconnectSession()
+			.then((accounts) => {
+				if (peraWallet.isConnected && notTwice){
+          console.log(0);
+          notTwice = false
+					handleUpdate();
+				}
+				
+				if (accounts.length) {
+					setAccountAddress(accounts[0]);
+				}
+			})
+			.catch((e) => console.log(e));
+	}, []);
 
   const disconnect = async () => {
     peraWallet.disconnect();
-
     setAccountAddress(null);
+  }
+
+  const withdrawseller = async(APN, account) => {
+    var resultarray = await callContract(APN, account)
+  
+    console.log('Withdraw funds');
+    const today = new Date();
+    console.log('Today = '+today);
+    const todaytimestamp = Math.floor(today.getTime()/1000);
+    console.log('Today timestamp = '+todaytimestamp);
+    var finalurl=zillowurl+APN;
+    var result = await axios.get(finalurl);
+    console.log('Total = '+result['data']['total']);
+    try{
+      var resultdate=result['data']['bundle'][0]['recordingDate'];
+    }
+    catch{
+      var resultdate='1/1/2000'
+    }
+    
+    var resultdate2 = new Date(resultdate);
+    
+    var resulttimestamp = Math.floor(resultdate2.getTime()/1000);
+    
+    console.log(resulttimestamp);
+  
+    var myactive = resultarray[10]
+    var mystartdate = resultarray[4]
+    var mysellbydate = resultarray[5]
+    var myslackdate = parseInt(mysellbydate, 10) + (30*24*3600);
+    console.log('sellbydate = '+mysellbydate);
+    console.log('slackdate = '+myslackdate);
+  
+      if (todaytimestamp<myslackdate) {
+        console.log('slack time not yet passed');
+        return 4;
+      }
+      else if (myactive==false){
+        console.log('contract no longer active');
+        return 3;
+      }
+      else if (resulttimestamp<mysellbydate && resulttimestamp>mystartdate){
+        console.log('Property sold on time');
+        return 5;
+      }
+      else {
+        try {
+          var receipt = await withdrawSenderPera(APN, account)
+          console.log(receipt);
+          return 9;
+        }
+        catch{
+          console.log('Action cancelled');
+        }
+      }
+  }
+  
+  const withdrawrealtor = async(APN, account) =>{
+    console.log(APN)
+    console.log(account)
+    var resultarray = await callContract(APN, account)
+    console.log('Withdraw funds');
+    
+    var finalurl=zillowurl+APN;
+    var result = await axios.get(finalurl);
+    
+    try{
+      var resultdate=result['data']['bundle'][0]['recordingDate'];
+    }
+    catch{
+      var resultdate='1/1/2000'
+    }
+  
+    var resultdate2 = new Date(resultdate);
+    var resulttimestamp = Math.floor(resultdate2.getTime()/1000);
+    
+    console.log('Timestamp = '+resulttimestamp);
+  
+    var myactive = resultarray[10]
+    var mystartdate = Number(resultarray[4])
+    var mysellbydate = Number(resultarray[5])
+    console.log('sellbydate = '+mysellbydate);
+    console.log('slackdate = '+mystartdate);
+          
+      if (resulttimestamp < mystartdate) {
+        console.log('record date earlier than startdate');
+        return 1;
+      }
+      else if (resulttimestamp > mysellbydate) {
+        console.log('record date later than sellbydate');
+        return 2;
+      }
+      else if (myactive==false){
+        console.log('contract no longer active');
+        return 3;
+      }
+      else {
+        try
+        {
+          var receipt = await withdrawReceiverPera(APN, account)
+          console.log(receipt);
+          return 9;
+        }
+        catch {
+          console.log('Action cancelled');
+        }
+      }
   }
 
 	const login = async () => {
 		peraWallet
-    .connect()
-    .then((newAccounts) => {
-      peraWallet.connector.on("disconnect", disconnect);
+      .connect()
+      .then((newAccounts) => {
+        peraWallet.connector.on("disconnect", disconnect);
 
-      setAccountAddress(newAccounts[0]);
-    })
-    .catch((error) => {
-      if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
-        console.log(error);
-      }
-    });
+        setAccountAddress(newAccounts[0]);
+      })
+      .catch((error) => {
+        if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
+          console.log(error);
+        }
+      });
+	}
+
+  const refresh = async () => {
+		peraWallet
+			.reconnectSession()
+			.then((accounts) => {
+				if (peraWallet.isConnected) {
+					handleUpdate();
+				}
+				
+				if (accounts.length) {
+					setAccountAddress(accounts[0]);
+				}
+			})
+			.catch((e) => console.log(e));
 	}
 
     const handleClosePopup = () => {
@@ -273,125 +487,103 @@ const MyPage = () => {
       };
 
     const handleWithdrawRealtor = async() => {
-        var result = await withdrawrealtor(APN);
+        var result = await withdrawrealtor(APN, accountAddress);
         console.log(result);
         if (result==1){
             setPopupHeader('Unable to withdraw');
             setPopupText('Last public record date is before contract start date');
             setShowPopup(true);
         }
-
 		else if (result==2){
             setPopupHeader('Unable to withdraw');
             setPopupText('Last record date later than sell by date');
             setShowPopup(true);
         }
-
 		else if (result==3){
             setPopupHeader('Unable to withdraw');
             setPopupText('Contract no longer active');
             setShowPopup(true);
         }
-
 		else if (result==4){
             setPopupHeader('Unable to withdraw');
             setPopupText('Earliest withdraw date is 30 days after sell by date and if contract terms not met');
             setShowPopup(true);
         }
-
-		
-
 		else if (result==9){
             setPopupHeaderSuccess('Withdrawal Initiated. Final withdrawal confirmation will come from Metamask');
-            //setPopupText('Earliest withdraw date is 30 days after sell by date');
             setShowPopupSuccess(true);
         }
     }
 
 	const handleWithdrawSeller = async() => {
-        var result = await withdrawseller(APN);
-        console.log(result);
-        if (result==1){
-            setPopupHeader('Unable to withdraw');
-            setPopupText('Last public record date is before contract start date');
-            setShowPopup(true);
-        }
-
+    var result = await withdrawseller(APN, accountAddress);
+    console.log(result);
+    if (result==1){
+      setPopupHeader('Unable to withdraw');
+      setPopupText('Last public record date is before contract start date');
+      setShowPopup(true);
+    }
 		else if (result==2){
             setPopupHeader('Unable to withdraw');
             setPopupText('Last recorded date is later than sell by date');
             setShowPopup(true);
         }
-
 		else if (result==3){
             setPopupHeader('Unable to withdraw');
             setPopupText('Contract is no longer active');
             setShowPopup(true);
         }
-
 		else if (result==4){
             setPopupHeader('Unable to withdraw');
             setPopupText('Earliest withdraw date is 30 days after sell by date due to processing times with county recording office');
             setShowPopup(true);
         }
-
 		else if (result==5){
             setPopupHeader('Unable to withdraw');
             setPopupText('Last recorded date meets terms of the contract.');
             setShowPopup(true);
         }
-
-		
-
 		else if (result==9){
-            setPopupHeaderSuccess('Withdrawal Initiated. Final withdrawal confirmation will come from Metamask');
-            //setPopupText('Earliest withdraw date is 30 days after sell by date');
+            setPopupHeaderSuccess('Withdrawal Initiated.');
             setShowPopupSuccess(true);
         }
     }
 
     const handleUpdate = async() =>{
-        var resultarray = await fetch(APN);
-        console.log('returned amount'+resultarray[4]);
-        console.log('Updated amount = '+acontractamount);
+      var resultarray = await callContract(APN, accountAddress)
 
-        var startdate = resultarray[2].toLocaleString(undefined, {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          });
-        console.log('startdate = '+startdate);
-        setStartdate(startdate);
-        console.log('Updated startdate = '+astartdate);
+      setSeller(resultarray[1]);
+      setRealtor(resultarray[2]);
+      setAmount(Number(resultarray[3]) / 1e6);
+      var resultdate = new Date(Number(resultarray[4])*1000);
+      startdate = new Date(resultdate.getTime()+36000000);
+      resultarray[4]=startdate;
+      var startdate = resultarray[4].toLocaleString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      setStartdate(startdate);
 
-        var sellbydate = resultarray[3].toLocaleString(undefined, {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          });
-        console.log('sellbydate = '+sellbydate);
-        setSellbydate(sellbydate);
-        console.log('Updated sellbydate = '+asellbydate);
+      var resultdate2 = new Date(Number(resultarray[5])*1000);
+      sellbydate = new Date(resultdate2.getTime()+36000000);
+      resultarray[5]=sellbydate;
+      var sellbydate = resultarray[5].toLocaleString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      setSellbydate(sellbydate);
 
-        var activeflag = resultarray[5];
-        console.log('Active flag = '+activeflag);
-        if (activeflag){
-            setActiveFlag('YES');
-        }
-        else {
-            setActiveFlag('NO');
-        }
-        //setActiveFlag(activeflag);
-        console.log(aactiveflag);
-
-        var seller = resultarray[0];
-        setSeller(seller);
-        var realtor = resultarray[1];
-        setRealtor(realtor);
+      var activeflag = resultarray[10];
+      if (activeflag){
+        setActiveFlag('YES');
+      }
+      else {
+        setActiveFlag('NO');
+      }
     }
     
-
-   //fetch();
     return (
       <div className="bg-default-bg min-h-screen">
         <nav className="bg-default-bg p-4">
@@ -413,7 +605,7 @@ const MyPage = () => {
           <div className="flex flex-col gap-4">
 		  	<div className="flex justify-between items-center">
             	<h2 className="text-default-text text-2xl font-bold">APN# {APN}</h2>
-				<button className="bg-default-bt text-default-bt-text px-4 py-2 rounded w-32 border border-default-border" onClick={handleUpdate}>
+				<button className="bg-default-bt text-default-bt-text px-4 py-2 rounded w-32 border border-default-border" onClick={refresh}>
               		Refresh info
             	</button>
 			</div>
@@ -429,7 +621,7 @@ const MyPage = () => {
                 <div className="w-1/2">
                  
                   <ul className="list-inside text-default-text">
-                    <li>Amount (ETH)</li>
+                    <li>Amount (Algos)</li>
                     <li>Start date</li>
                     <li>Sell by</li>
                     <li>Sender Wallet</li>

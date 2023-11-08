@@ -162,7 +162,7 @@ async function callContract(APN, account) {
 	const atc = new algosdk.AtomicTransactionComposer();
 
 	atc.addMethodCall({
-		appID: 468709015,
+		appID: 469360340,
 		method: algosdk.getMethodByName(contract.methods, 'readFundsWithdrawnStatus'),
 		sender: account,
 		suggestedParams,
@@ -170,11 +170,11 @@ async function callContract(APN, account) {
 			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
 			return await peraWallet.signTransaction([txnGroups]);
 		},
-		methodArgs: ["123456"],
+		methodArgs: ["123456789"], // change to APN in production
 		boxes: [
 			{
-				appIndex: 468709015,
-				name: new Uint8Array(Buffer.from('123456'))
+				appIndex: 469360340,
+				name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
 			}
 		],
 	});
@@ -198,17 +198,17 @@ export default function Home() {
 	useEffect(() => {
 		// Reconnect to the session when the component is mounted
 		peraWallet
-		.reconnectSession()
-		.then((accounts) => {
-			if (peraWallet.isConnected) {
-				peraWallet.connector.on("disconnect", disconnect);
-			}
-			
-			if (accounts.length) {
-				setAccountAddress(accounts[0]);
-			}
-		})
-		.catch((e) => console.log(e));
+			.reconnectSession()
+			.then((accounts) => {
+				if (peraWallet.isConnected) {
+					peraWallet.connector.on("disconnect", disconnect);
+				}
+				
+				if (accounts.length) {
+					setAccountAddress(accounts[0]);
+				}
+			})
+			.catch((e) => console.log(e));
 	}, []);
 
 	const disconnect = async () => {

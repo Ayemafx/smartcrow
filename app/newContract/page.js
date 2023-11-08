@@ -5,49 +5,136 @@ import Popup from '@/components/popup';
 import PopupSuccess from '@/components/popupsuccess';
 import PopupInfo from '@/components/popupinfo';
 import { PeraWalletConnect } from "@perawallet/connect";
+import * as algosdk from 'algosdk'
 
 const peraWallet = new PeraWalletConnect();
-
-//const axios = require('axios');
-
-//const CoinMarketCap = require('coinmarketcap-api')
- 
-const apiKey = 'WE99NHIIQC8Z8KDMEGJJ3SPACQ1F8VKD7E'
-var api = require('etherscan-api').init(apiKey);
-//Mumbai
-//const NFTcontract="0x009bB4938f9C8a3290e5FC166D6eF8d1616Ad5e8";
-//Goerli
-
-const zillowurl='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&documentType=grant&recordingDate.gt=2015-01-01&parcels.apn=';
-const zillowurladdress='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&parcels.apn=';
-
-const {ethers} = require('ethers');
-const axios = require('axios');
-var provider;
-var MyContract;
-var MyContractwSigner;
-
-
-//test
-const formatLongString = (str) => {
-	if (str.length > 6) {
-	  return str.slice(0, 3) + '...' + str.slice(-3);
-	}
-	return str;
-  };
-
+const myabi = {
+  "name": "Sender Funds Contract with Beaker",
+  "methods": [
+      {
+          "name": "createFundsInfo",
+          "args": [
+              {
+                  "type": "pay",
+                  "name": "pay"
+              },
+              {
+                  "type": "string",
+                  "name": "propertyNumber"
+              },
+              {
+                  "type": "address",
+                  "name": "Receiver"
+              },
+              {
+                  "type": "uint64",
+                  "name": "startDate"
+              },
+              {
+                  "type": "uint64",
+                  "name": "endDate"
+              },
+              {
+                  "type": "bool",
+                  "name": "haveExpectedSalesPrice"
+              },
+              {
+                  "type": "uint64",
+                  "name": "expectedSalesPrice"
+              }
+          ],
+          "returns": {
+              "type": "void"
+          }
+      },
+      {
+          "name": "updateSenderFundsItem",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              },
+              {
+                  "type": "bool",
+                  "name": "propertySold"
+              },
+              {
+                  "type": "bool",
+                  "name": "meetSalesCondition"
+              },
+              {
+                  "type": "bool",
+                  "name": "postDeadlineCheck"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "readItem",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "readFundsWithdrawnStatus",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "bool"
+          }
+      },
+      {
+          "name": "WithdrawFundsForReceiver",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      },
+      {
+          "name": "WithdrawFundsForSender",
+          "args": [
+              {
+                  "type": "string",
+                  "name": "item_name"
+              }
+          ],
+          "returns": {
+              "type": "(string,address,address,uint64,uint64,uint64,bool,bool,uint64,bool,bool,bool)"
+          }
+      }
+  ],
+  "networks": {}
+}
+//290-15-153
 const MyForm = () => {
-    const today = new Date().toISOString().substring(0, 10); // Get today's date in yyyy-mm-dd format
+  const today = new Date().toISOString().substring(0, 10); // Get today's date in yyyy-mm-dd format
 	const [verificationfailed, setVerified] = useState(true);
 	const [showPopup, setShowPopup] = useState(false);
 	const [showPopupSuccess, setShowPopupSuccess] = useState(false);
-    const [popupHeader, setPopupHeader] = useState("");
+  const [popupHeader, setPopupHeader] = useState("");
 	const [popupHeaderSuccess, setPopupHeaderSuccess] = useState("");
-    const [popupText, setPopupText] = useState("");
+  const [popupText, setPopupText] = useState("");
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [accountAddress, setAccountAddress] = useState(null);
-  	const isConnectedToPeraWallet = !!accountAddress;
+  const isConnectedToPeraWallet = !!accountAddress;
 
 	useEffect(() => {
 		// Reconnect to the session when the component is mounted
@@ -64,75 +151,115 @@ const MyForm = () => {
 		  })
 		  .catch((e) => console.log(e));
 	  }, []);
-	
-	  const disconnect = async () => {
-		peraWallet.disconnect();
-	
-		setAccountAddress(null);
-	  }
 
-	const router = useRouter();
 	const searchParams = useSearchParams()
-  	const SelAPN = searchParams.get('SelAPN');
+  const SelAPN = searchParams.get('SelAPN');
 	const Address = searchParams.get('Address');
-	
+  const router = useRouter();
 
-	const createbonusfunc = async () => {
-	var APN = document.getElementById("parcelid").value;
-	var Amount = document.getElementById("bonusamount").value;
-	var Realtor = document.getElementById("receiverwallet").value;
-	var Sellby = new Date(document.getElementById("sellbydate").value);
+	async function callBonus(account) {
+		var APN = document.getElementById("parcelid").value;
+		var amount = document.getElementById("bonusamount").value;
+		var realtor = document.getElementById("receiverwallet").value;
+		var Sellby = new Date(document.getElementById("sellbydate").value);
+		var selltimestamp = Math.floor(Sellby.getTime()/1000);
+		var Startby = new Date(document.getElementById("startdate").value);
+		var startdatetimestamp = Math.floor(Startby.getTime()/1000);
+
+		const algodToken = '';
+		const algodServer = 'https://testnet-api.algonode.cloud';
+		const algodPort = undefined;
+		const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+
+		let accountInfo = await algodClient.accountInformation(account).do();
+
+		const waitForBalance = async () => {
+			accountInfo = await algodClient.accountInformation(account).do();
+		
+			const balance = accountInfo.amount;
+		
+			if (balance === 0) {
+			  await waitForBalance();
+			}
+		};
 	
-	var Selltimestamp = Math.floor(Sellby.getTime()/1000);
-	var Startby = new Date(document.getElementById("startdate").value);
-	var Startdatetimestamp = Math.floor(Startby.getTime()/1000);
-	setPopupHeaderSuccess('Contract Initiated. Final contract confirmation will come from PeraWallet');
-	setShowPopupSuccess(true);
+		await waitForBalance();
+	
+		console.log(`${account} funded!`);
+
+		const suggestedParams = await algodClient.getTransactionParams().do();
+
+		const contract = new algosdk.ABIContract(myabi);
+		const atc = new algosdk.AtomicTransactionComposer();
+
+    // Create a payment transaction object with the sender, receiver, amount, and other parameters
+    const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      from: account,
+      suggestedParams: suggestedParams,
+      to: algosdk.getApplicationAddress(469360340),
+      amount: amount * 1e6,
+    });
+    
+    atc.addMethodCall({
+        appID: 469360340,
+        method: algosdk.getMethodByName(contract.methods, 'createFundsInfo'),
+        sender: account,
+        suggestedParams,
+        signer,
+        methodArgs: [{ txn: paymentTxn, signer }, "123456789", realtor, startdatetimestamp, selltimestamp, false, 1], // change to APN in production
+        boxes: [
+          {
+            appIndex: 469360340,
+            name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
+          }
+        ],
+    });
+    
+		const results = await atc.execute(algodClient, 3);
+		console.log(`Contract created ` + results.methodResults[0].returnValue);
+		setPopupHeaderSuccess('Contract Initiated!');
+		setShowPopupSuccess(true);
 	}
 
+  async function signer(unsignedTxns) {
+    const signerTransactions = unsignedTxns.map(txn => {
+      return {txn, signers: [algosdk.encodeAddress(txn.from.publicKey)]}
+    })
+    return await peraWallet.signTransaction([signerTransactions])
+  }
+	
+	const createbonusfunc = async () => {
+		peraWallet
+		.reconnectSession()
+		.then((accounts) => {
+			if (peraWallet.isConnected) {
+				callBonus(accounts[0])
+			}
+			else {
+				login();
+			}
+		})
+		.catch((e) => console.log(e));
+	}
 
 	const login = async () => {
 		peraWallet
 			.connect()
 			.then((newAccounts) => {
-			peraWallet.connector.on("disconnect", disconnect);
-
-			setAccountAddress(newAccounts[0]);
+				peraWallet.connector.on("disconnect", disconnect);
+				setAccountAddress(newAccounts[0]);
 			})
 			.catch((error) => {
 			if (error?.data?.type !== "CONNECT_MODAL_CLOSED") {
 				console.log(error);
 			}
-			});
+		});
 	}
 
-	/*const checkprice = async () =>{
-		console.log('check ETH price')
-		//client.getQuotes({symbol: 'USD,ETH'}).then(console.log).catch(console.error)
-		//var response = axios.get(coinurl, {coinparameters})
-		var response = api.
-		var balance = api.account.balance('0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae');
-		balance.then(function(balanceData){
-  		console.log(balanceData);});
-		//console.log(response);
-
-	}*/
-
-	useEffect(()=>{
-        peraWallet
-			.reconnectSession()
-			.then((accounts) => {
-				if (peraWallet.isConnected) {
-				peraWallet.connector.on("disconnect", disconnect);
-				}
-		
-				if (accounts.length) {
-				setAccountAddress(accounts[0]);
-				}
-			})
-			.catch((e) => console.log(e));
-        //checkprice();
-    })
+	const disconnect = async () => {
+		peraWallet.disconnect();
+		setAccountAddress(null);
+	}
 
 	const handleClosePopup = () => {
         setShowPopup(false);
@@ -144,7 +271,7 @@ const MyForm = () => {
       };
 
 	  const handleClickBalloon = () => {
-		setBalloonText('The amount entered is in Algos. For a conversion to USD, please visit https://www.coinbase.com/converter/algo/usd Conversion can be up to five decimal points e.g. 0.00001');
+		setBalloonText('The amount entered is in Algos. For a conversion to USD, please visit https://www.coinbase.com/converter/algo/usd');
 		setShowBalloon(true);
 	  }
 
@@ -172,55 +299,6 @@ const MyForm = () => {
         setShowBalloon(false);
       };
 
-
-	const copyToClipboardseller = async () => {
-		// Logic to copy value to clipboard
-		//const valueToCopy = "Hello, clipboard!";
-		//navigator.clipboard.writeText(valueToCopy);
-		let clipboardresult = await navigator.clipboard.readText();
-		
-		const myInput = document.getElementById("senderwallet");
-		//console.log(APN);
-		myInput.value=clipboardresult;
-		
-	  };
-
-	  const copyToClipboardreceiver = async () => {
-		// Logic to copy value to clipboard
-		//const valueToCopy = "Hello, clipboard!";
-		//navigator.clipboard.writeText(valueToCopy);
-		let clipboardresult = await navigator.clipboard.readText();
-		
-		const myInput = document.getElementById("receiverwallet");
-		//console.log(APN);
-		myInput.value=clipboardresult;
-		
-	  };
-
-	  //verify input data
-	  const verifydata = async() => {
-		const verAPN= document.getElementById("parcelid").value;
-		const verAmount= document.getElementById("bonusamount").value;
-		const verStartdate= document.getElementById("startdate").value;
-		const verSellbydate= document.getElementById("sellbydate").value;
-		const verSeller= document.getElementById("senderwallet").value;
-		const verRealtor= document.getElementById("receiverwallet").value;
-
-		if (verAPN=="" || verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
-			console.log('Verification failed');
-			setVerified(true);
-			setPopupHeader('Input verification failed');
-			setPopupText('Please check input data');
-			setShowPopup(true);
-		}
-		else{
-			console.log('Verification ok');
-			setVerified(false);
-		}
-
-	  }
-
-	  //verify input data
 	  const handleChange = async() => {
 		const verAPN= document.getElementById("parcelid").value;
 		const verAmount= document.getElementById("bonusamount").value;
@@ -229,18 +307,20 @@ const MyForm = () => {
 		const verSeller= document.getElementById("senderwallet").value;
 		const verRealtor= document.getElementById("receiverwallet").value;
 
-		if (verAPN=="" || verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
+		if (verAPN=="") {
 			console.log('Verification failed');
 			setVerified(true);
-			//setPopupHeader('Input verification failed');
-			//setPopupText('Please check input data');
-			//setShowPopup(true);
+			setPopupHeader('Input verification failed');
+			setPopupText('Please check input data');
+			setShowPopup(true);
+		}
+		if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
+			setVerified(true);
 		}
 		else{
 			console.log('Verification ok');
 			setVerified(false);
 		}
-
 	  }
 
     return (
@@ -288,9 +368,10 @@ const MyForm = () => {
                 Amount (Algos)
               </label>
               <input
-                type="text"
+                type="number"
 				inputMode='numeric'
                 id="bonusamount"
+                min="0"
                 className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
 				onChange={handleChange}
               />
