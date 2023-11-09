@@ -198,11 +198,7 @@ export default function Home() {
 		try {
 			const results = await atc.execute(algodClient, 3);
 			const active = results.methodResults[0].returnValue
-			if (active) {
-				setBalloonText('This contract is no longer active');
-				setShowBalloon(true);
-			}
-			else {
+			if (!active) {
 				setbuttonExistingContract(false);
 				setbuttonNewContract(true);
 			}

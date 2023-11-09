@@ -250,6 +250,7 @@ const MyPage = () => {
   const [asellbydate, setSellbydate] = useState("");
   const [astartdate, setStartdate] = useState("");
   const [aactiveflag, setActiveFlag] = useState("");
+  const [asalesPrice, setSalesPrice] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [fetching, setFetch] = useState(false);
 	const [showPopupSuccess, setShowPopupSuccess] = useState(false);
@@ -431,6 +432,9 @@ const MyPage = () => {
       });
       setSellbydate(sellbydate);
 
+      var salesPrice = resultarray[8];
+      setSalesPrice(Number(salesPrice) / 1e6);
+
       var activeflag = resultarray[10];
       if (activeflag){
         setActiveFlag('NO');
@@ -482,7 +486,8 @@ const MyPage = () => {
                     <li>Sell by</li>
                     <li>Sender Wallet</li>
                     <li>Receiver Wallet</li>
-                    <li>Still active</li>
+                    <li>Still Active</li>
+                    <li>Sales Price ($)</li>
                   </ul>
                 </div>
                 <div className="w-1/2 text-right text-default-text">
@@ -494,6 +499,7 @@ const MyPage = () => {
                     <li>{formatLongString(aseller)}</li>
                     <li>{formatLongString(arealtor)}</li>
                     <li>{aactiveflag}</li>
+                    <li>{asalesPrice}</li>
                   </ul>
                 </div>
               </div>

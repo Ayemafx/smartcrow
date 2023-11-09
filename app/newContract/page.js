@@ -135,6 +135,7 @@ const MyForm = () => {
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [accountAddress, setAccountAddress] = useState(null);
+  const [isForSale, setIsForSale] = useState(false);
   const isConnectedToPeraWallet = !!accountAddress;
 
 	useEffect(() => {
@@ -144,6 +145,7 @@ const MyForm = () => {
 		  .then((accounts) => {
 			if (peraWallet.isConnected) {
         setAccountAddress(accounts[0]);
+        document.getElementById("salesprice").value = 0
 			}
 	  
 		  })
@@ -163,6 +165,7 @@ const MyForm = () => {
 		var selltimestamp = Math.floor(Sellby.getTime()/1000);
 		var Startby = new Date(document.getElementById("startdate").value);
 		var startdatetimestamp = Math.floor(Startby.getTime()/1000);
+    var salesPrice = document.getElementById("salesprice").value;
 
 		const algodToken = '';
 		const algodServer = 'https://testnet-api.algonode.cloud';
@@ -188,7 +191,7 @@ const MyForm = () => {
         sender: account,
         suggestedParams,
         signer,
-        methodArgs: [{ txn: paymentTxn, signer }, APN, realtor, startdatetimestamp, selltimestamp, false, 1], // change to APN in production
+        methodArgs: [{ txn: paymentTxn, signer }, APN, realtor, startdatetimestamp, selltimestamp, isForSale, salesPrice * 1e6], // change to APN in production
         boxes: [
           {
             appIndex: 469360340,
@@ -277,6 +280,11 @@ const MyForm = () => {
 		setShowBalloon(true);
 	  }
 
+    const handleClickBalloon6 = () => {
+      setBalloonText('This is the sales price of the conract. Add the anticipated, future, greater than or equal to sales price of the real estate/home.');
+      setShowBalloon(true);
+      }
+
 	  const handleCloseBalloon = () => {
         setShowBalloon(false);
       };
@@ -286,8 +294,10 @@ const MyForm = () => {
 		const verAmount= document.getElementById("bonusamount").value;
 		const verStartdate= document.getElementById("startdate").value;
 		const verSellbydate= document.getElementById("sellbydate").value;
-		const verSeller= document.getElementById("senderwallet").value;
-		const verRealtor= document.getElementById("receiverwallet").value;
+		const verSeller = document.getElementById("senderwallet").value;
+		const verRealtor = document.getElementById("receiverwallet").value;
+    const salesPrice = document.getElementById("salesprice").value;
+    console.log(salesPrice)
 
 		if (verAPN=="") {
 			console.log('Verification failed');
@@ -296,12 +306,21 @@ const MyForm = () => {
 			setPopupText('Please check input data');
 			setShowPopup(true);
 		}
-		if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
-			setVerified(true);
-		}
-		else{
-			console.log('Verification ok');
-			setVerified(false);
+    else if (isForSale) {
+      if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="" || salesPrice=="") {
+        setVerified(true);
+      }
+      else {
+        setVerified(false);
+      }
+    }
+		else {
+			if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
+        setVerified(true);
+      }
+      else {
+        setVerified(false);
+      }
 		}
 	  }
 
@@ -347,7 +366,7 @@ const MyForm = () => {
             </div>
             <div className="flex items-center flex-row p-2">
               <label htmlFor="bonusamount" className="font-bold mr-4 w-24 text-default-text">
-                Amount (Algos)
+                Amount (ALGO)
               </label>
               <input
                 type="number"
@@ -375,6 +394,7 @@ const MyForm = () => {
 			  <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon2}>
 			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
 			</button>
+
             </div>
             <div className="flex items-center flex-row p-2">
               <label htmlFor="sellbydate" className="font-bold mr-4 w-24 text-default-text">
@@ -388,8 +408,61 @@ const MyForm = () => {
               />
 			  <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon3}>
 			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
+			  </button>
+          </div>
+
+          <div className="flex items-center flex-row p-2">
+            <label className="font-bold mr-4 w-24 text-default-text">Add Sales Price?</label>
+            <div className="flex items-center">
+              <label className="mr-2">
+                <input
+                  type="radio"
+                  id="yes"
+                  checked={isForSale}
+                  onChange={() => {
+                    setIsForSale(true)
+                    handleChange()
+                    console.log("handle change2")
+                  }}
+                  className="mr-1"
+                />
+                Yes
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  id="no"
+                  checked={!isForSale}
+                  onChange={() => {
+                    setIsForSale(false)
+                    document.getElementById("salesprice").value = 0
+                    handleChange()
+                    console.log("handle change")
+                  }}
+                  className="mr-1"
+                />
+                No
+              </label>
             </div>
+          </div>
+
+
+              <div className="flex items-center flex-row p-2">
+                <label htmlFor="salesprice" className="font-bold mr-4 w-30 text-default-text">
+                  Sales Price ≥
+                </label>
+                <input
+                  type="number"
+                  id="salesprice"
+                  className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
+                  onChange={handleChange}
+                  disabled={!isForSale}
+                />
+          <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon6}>
+            <img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
+          </button>
+            </div>
+            
             <div className="flex items-center flex-row p-2">
               <label htmlFor="senderwallet" className="font-bold mr-4 w-24 text-default-text">
                 Sender Wallet
