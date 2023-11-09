@@ -122,7 +122,8 @@ const myabi = {
   ],
   "networks": {}
 }
-//290-15-153
+
+
 const MyForm = () => {
   const today = new Date().toISOString().substring(0, 10); // Get today's date in yyyy-mm-dd format
 	const [verificationfailed, setVerified] = useState(true);
@@ -142,12 +143,9 @@ const MyForm = () => {
 		  .reconnectSession()
 		  .then((accounts) => {
 			if (peraWallet.isConnected) {
-			  peraWallet.connector.on("disconnect", disconnect);
+        setAccountAddress(accounts[0]);
 			}
 	  
-			if (accounts.length) {
-			  setAccountAddress(accounts[0]);
-			}
 		  })
 		  .catch((e) => console.log(e));
 	  }, []);
@@ -171,22 +169,6 @@ const MyForm = () => {
 		const algodPort = undefined;
 		const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
 
-		let accountInfo = await algodClient.accountInformation(account).do();
-
-		const waitForBalance = async () => {
-			accountInfo = await algodClient.accountInformation(account).do();
-		
-			const balance = accountInfo.amount;
-		
-			if (balance === 0) {
-			  await waitForBalance();
-			}
-		};
-	
-		await waitForBalance();
-	
-		console.log(`${account} funded!`);
-
 		const suggestedParams = await algodClient.getTransactionParams().do();
 
 		const contract = new algosdk.ABIContract(myabi);
@@ -206,11 +188,11 @@ const MyForm = () => {
         sender: account,
         suggestedParams,
         signer,
-        methodArgs: [{ txn: paymentTxn, signer }, "123456789", realtor, startdatetimestamp, selltimestamp, false, 1], // change to APN in production
+        methodArgs: [{ txn: paymentTxn, signer }, APN, realtor, startdatetimestamp, selltimestamp, false, 1], // change to APN in production
         boxes: [
           {
             appIndex: 469360340,
-            name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
+            name: new Uint8Array(Buffer.from(APN)) // change to APN in production
           }
         ],
     });

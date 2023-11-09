@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PeraWalletConnect } from "@perawallet/connect";
 import * as algosdk from 'algosdk'
+import _fetch from 'isomorphic-fetch';
+import dotenv from 'dotenv';
 
-const zillowurladdress='https://api.bridgedataoutput.com/api/v2/pub/transactions?access_token=d555ec24e3f182c86561b09d0a85c3dc&limit=1&sortBy=recordingDate&order=desc&fields=recordingDate,parcels.apn,parcels.full&parcels.apn=';
 const peraWallet = new PeraWalletConnect();
-const axios = require('axios');
 const myabi = {
     "name": "Sender Funds Contract with Beaker",
     "methods": [
@@ -123,70 +123,8 @@ const myabi = {
     "networks": {}
 }
 
-const removeLeadingTrailingBlanksAndDashes = async (str) => {
-	// Remove leading and trailing blanks and dashes
-	const trimmedStr = str.replace(/(^\s+)|(\s+$)/g, '').replace(/(^-+)|(-+$)/g, '');
-	// Remove dashes within the string
-	const finalStr = trimmedStr.replace(/-/g, '');
-	return finalStr;
-};
-//290-15-153
-async function callContract(APN, account) {
-	const algodToken = '';
-	const algodServer = 'https://testnet-api.algonode.cloud';
-	const algodPort = undefined;
-	const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
-
-	let accountInfo = await algodClient.accountInformation(account).do();
-
-  	console.log('accountInfo:', accountInfo);
-
-	const waitForBalance = async () => {
-		accountInfo = await algodClient.accountInformation(account).do();
-	
-		const balance = accountInfo.amount;
-	
-		if (balance === 0) {
-		  await waitForBalance();
-		}
-	};
-
-	await waitForBalance();
-
-	console.log(`${account} funded!`);
-
-	const suggestedParams = await algodClient.getTransactionParams().do();
-  	console.log('suggestedParams:', suggestedParams);
-
-	const contract = new algosdk.ABIContract(myabi);
-	const atc = new algosdk.AtomicTransactionComposer();
-
-	atc.addMethodCall({
-		appID: 469360340,
-		method: algosdk.getMethodByName(contract.methods, 'readFundsWithdrawnStatus'),
-		sender: account,
-		suggestedParams,
-		signer: async (unsignedTxns) => {
-			const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
-			return await peraWallet.signTransaction([txnGroups]);
-		},
-		methodArgs: ["123456789"], // change to APN in production
-		boxes: [
-			{
-				appIndex: 469360340,
-				name: new Uint8Array(Buffer.from('123456789')) // change to APN in production
-			}
-		],
-	});
-
-	const results = await atc.execute(algodClient, 3);
-  	console.log(`Contract read success ` + results.methodResults[0].returnValue);
-	return results.methodResults[0].returnValue
-}
-
 
 export default function Home() {
-	const [APNaddress, setAPNAddress] = useState("Address to be checked");
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [buttonNewContract,setbuttonNewContract] = useState(true);
@@ -201,12 +139,9 @@ export default function Home() {
 			.reconnectSession()
 			.then((accounts) => {
 				if (peraWallet.isConnected) {
-					peraWallet.connector.on("disconnect", disconnect);
+					setAccountAddress(accounts[0])
 				}
-				
-				if (accounts.length) {
-					setAccountAddress(accounts[0]);
-				}
+			
 			})
 			.catch((e) => console.log(e));
 	}, []);
@@ -230,6 +165,54 @@ export default function Home() {
 		});
 	}
 
+	async function callContract(APN, account) {
+		const algodToken = '';
+		const algodServer = 'https://testnet-api.algonode.cloud';
+		const algodPort = undefined;
+		const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+	
+		const suggestedParams = await algodClient.getTransactionParams().do();
+		  console.log('suggestedParams:', suggestedParams);
+	
+		const contract = new algosdk.ABIContract(myabi);
+		const atc = new algosdk.AtomicTransactionComposer();
+	
+		atc.addMethodCall({
+			appID: 469360340,
+			method: algosdk.getMethodByName(contract.methods, 'readFundsWithdrawnStatus'),
+			sender: account,
+			suggestedParams,
+			signer: async (unsignedTxns) => {
+				const txnGroups = unsignedTxns.map((t) => ({txn: t, signers: [t.from]}));
+				return await peraWallet.signTransaction([txnGroups]);
+			},
+			methodArgs: [APN],
+			boxes: [
+				{
+					appIndex: 469360340,
+					name: new Uint8Array(Buffer.from(APN))
+				}
+			],
+		});
+	
+		try {
+			const results = await atc.execute(algodClient, 3);
+			const active = results.methodResults[0].returnValue
+			if (active) {
+				setBalloonText('This contract is no longer active');
+				setShowBalloon(true);
+			}
+			else {
+				setbuttonExistingContract(false);
+				setbuttonNewContract(true);
+			}
+		} catch (e) {
+			console.log(e);
+			setbuttonNewContract(false);
+			setbuttonExistingContract(true);
+		}
+	}
+
 	const handleClickBalloon = () => {
 		setBalloonText('Check the address of the given APN. If there is no active contract on the given APN, you can create a new contract. If there is an active contract, you can check the details of the existing contract.');
 		setShowBalloon(true);
@@ -239,27 +222,12 @@ export default function Home() {
 		setShowBalloon(false);
 	};
 
-	async function fetch(APN) {
-		var activeflag = null;
-
+	async function checkAPN(APN) {
 		peraWallet
 		.reconnectSession()
 		.then((accounts) => {
 			if (peraWallet.isConnected) {
 				callContract(APN, accounts[0]).then((res) => {
-				activeflag = res;
-
-				// Now, update your application state or perform actions based on activeflag.
-				if (activeflag) {
-					setbuttonExistingContract(false);
-					setbuttonNewContract(true);
-				} else if (activeflag === false) {
-					setbuttonNewContract(false);
-					setbuttonExistingContract(true);
-				}
-				else {
-					alert("Invalid APN")
-				}
 			});
 			}
 			else {
@@ -272,39 +240,53 @@ export default function Home() {
 
 	const handleExistingContract = async() => {
 		var data = document.getElementById("myAPNInput").value;
-		data = await removeLeadingTrailingBlanksAndDashes(data);
 		const data2 = document.getElementById("addresscheck").value;
-		if (data=='Paste clipboard value here...'){
-			return 1;
-		}
-		else {router.push(`/existingContract?SelAPN=${data}&Address=${data2}`);}
+		router.push(`/existingContract?SelAPN=${data}&Address=${data2}`);
 	};
 
 	const handleNewContract = async() => {
 		var data = document.getElementById("myAPNInput").value;
-		data = await removeLeadingTrailingBlanksAndDashes(data);
 		const data2 = document.getElementById("addresscheck").value;
-		if (data=='Paste clipboard value here...'){
-			return 1;
-		}
-		else {router.push(`/newContract?SelAPN=${data}&Address=${data2}`);}
+		router.push(`/newContract?SelAPN=${data}&Address=${data2}`);
 	};
 
-	const checkaddress = async()=>{
+	const checkaddress = async() => {
 		var myAPN = document.getElementById("myAPNInput").value;
-		myAPN = await removeLeadingTrailingBlanksAndDashes(myAPN);
-		console.log('myAPN = '+myAPN);
-		var finalurl=zillowurladdress+myAPN;
-		console.log(finalurl);
-		var result = await axios.get(finalurl);
-		console.log(result);
-		var resultdate2 = await result['data']['bundle'][0]['parcels'][0]['full'];
-		console.log(resultdate2);
-		setAPNAddress(resultdate2);
-		console.log(APNaddress);
-		const myText = document.getElementById("addresscheck");
-		myText.value = resultdate2;
-		await fetch(myAPN);
+		dotenv.config()
+		const API_KEY = process.env.API_KEY
+		if (myAPN != "") {
+			const url = `https://api.rentcast.io/v1/properties/${encodeURIComponent(myAPN)}`;
+
+			try {
+				const response = await _fetch(url, {
+				method: 'GET',
+				headers: {
+					accept: 'application/json',
+					'X-Api-Key': API_KEY,
+				},
+			});
+		
+			if (response.ok) {
+				const json = await response.json();
+				const myText = document.getElementById("addresscheck");
+				myText.value = json.addressLine1;
+				const lastSaleDate = json.lastSaleDate;
+				const lastSalePrice = json.lastSalePrice;
+				checkAPN(myAPN);
+			} else {
+				setBalloonText('No property found for the given ID');
+				setShowBalloon(true);
+				console.log('No property found for the given ID');
+			}
+			} catch (error) {
+				console.log('Error fetching property information: ' + error.message);
+			}
+		}
+		else {
+			setBalloonText('Please enter an APN');
+			setShowBalloon(true);
+		}
+		
 	} 
 
   return (
@@ -321,7 +303,7 @@ export default function Home() {
 		<main className="flex flex-col items-center justify-center py-16">
 		  <section className="text-default-text text-center mb-8">
 			
-			<h1 className="text-default-text text-xl font-bold">Please enter your APN</h1>
+			<h1 className="text-default-text text-xl font-bold">Please enter your APN ID</h1>
 		  </section>
 		  <section className="flex items-center mb-8">
 			<input
