@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Popup from '@/components/popup';
 import PopupSuccess from '@/components/popupsuccess';
 import { PeraWalletConnect } from "@perawallet/connect";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import * as algosdk from 'algosdk'
 import axios from "axios"
 
@@ -261,6 +261,7 @@ const MyPage = () => {
   const isConnectedToPeraWallet = !!accountAddress;
 
   const searchParams = useSearchParams()
+  const router = useRouter();
   const APN = searchParams.get('SelAPN');
 	console.log('APN = '+APN);
 	const Address = searchParams.get('Address');
@@ -323,6 +324,7 @@ const MyPage = () => {
         setPopupHeaderSuccess('Withdrawal Initiated. ' + response.data["meetSalesCondition"].reason);
         setShowPopupSuccess(true);
         setFetch(false)
+        router.push('/');
       }
       else {
         setPopupHeader('Unable to withdraw');
@@ -433,7 +435,7 @@ const MyPage = () => {
       setSellbydate(sellbydate);
 
       var salesPrice = resultarray[8];
-      setSalesPrice(Number(salesPrice) / 1e6);
+      setSalesPrice(Number(salesPrice));
 
       var activeflag = resultarray[10];
       if (activeflag){

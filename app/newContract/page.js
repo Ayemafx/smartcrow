@@ -174,6 +174,8 @@ const MyForm = () => {
 
 		const suggestedParams = await algodClient.getTransactionParams().do();
 
+    salesPrice /= 1e6
+
 		const contract = new algosdk.ABIContract(myabi);
 		const atc = new algosdk.AtomicTransactionComposer();
 
@@ -252,8 +254,8 @@ const MyForm = () => {
 
 	  const handleClosePopupSuccess = () => {
         setShowPopupSuccess(false);
-		router.push('/');
-      };
+		    router.push('/');
+    };
 
 	  const handleClickBalloon = () => {
 		setBalloonText('The amount entered is in Algos. For a conversion to USD, please visit https://www.coinbase.com/converter/algo/usd');
@@ -300,7 +302,7 @@ const MyForm = () => {
 
       document.getElementById("salesprice").value = localStorage.getItem("lastSalePrice");
 
-      const dateString = "2005-06-20T00:00:00.000Z";
+      const dateString = localStorage.getItem("lastSaleDate");
       const originalDate = new Date(dateString);
 
       // Calculate 1 week before and after the original date
