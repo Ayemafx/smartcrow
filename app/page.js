@@ -245,11 +245,11 @@ export default function Home() {
 		const data2 = document.getElementById("addresscheck").value;
 		router.push(`/newContract?SelAPN=${data}&Address=${data2}`);
 	};
-
+	
 	const checkaddress = async() => {
 		var myAPN = document.getElementById("myAPNInput").value;
 		dotenv.config()
-		const API_KEY = process.env.API_KEY
+		const API_KEY = process.env.NEXT_PUBLIC_API_KEY
 		if (myAPN != "") {
 			const url = `https://api.rentcast.io/v1/properties/${encodeURIComponent(myAPN)}`;
 
@@ -266,8 +266,13 @@ export default function Home() {
 				const json = await response.json();
 				const myText = document.getElementById("addresscheck");
 				myText.value = json.addressLine1;
+				console.log(json)
 				const lastSaleDate = json.lastSaleDate;
 				const lastSalePrice = json.lastSalePrice;
+				console.log(lastSaleDate);
+				console.log(lastSalePrice)
+				localStorage.setItem("lastSaleDate", lastSaleDate);
+				localStorage.setItem("lastSalePrice", lastSalePrice);
 				checkAPN(myAPN);
 			} else {
 				setBalloonText('No property found for the given ID');

@@ -135,7 +135,7 @@ const MyForm = () => {
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [accountAddress, setAccountAddress] = useState(null);
-  const [isForSale, setIsForSale] = useState(false);
+  const [isForSale, setIsForSale] = useState(true);
   const isConnectedToPeraWallet = !!accountAddress;
 
 	useEffect(() => {
@@ -290,38 +290,53 @@ const MyForm = () => {
       };
 
 	  const handleChange = async() => {
-		const verAPN= document.getElementById("parcelid").value;
-		const verAmount= document.getElementById("bonusamount").value;
-		const verStartdate= document.getElementById("startdate").value;
-		const verSellbydate= document.getElementById("sellbydate").value;
-		const verSeller = document.getElementById("senderwallet").value;
-		const verRealtor = document.getElementById("receiverwallet").value;
-    const salesPrice = document.getElementById("salesprice").value;
-    console.log(salesPrice)
+      const verAPN= document.getElementById("parcelid").value;
+      const verAmount= document.getElementById("bonusamount").value;
+      const verStartdate= document.getElementById("startdate").value;
+      const verSellbydate= document.getElementById("sellbydate").value;
+      const verSeller = document.getElementById("senderwallet").value;
+      const verRealtor = document.getElementById("receiverwallet").value;
+      const salesPrice = document.getElementById("salesprice").value;
 
-		if (verAPN=="") {
-			console.log('Verification failed');
-			setVerified(true);
-			setPopupHeader('Input verification failed');
-			setPopupText('Please check input data');
-			setShowPopup(true);
-		}
-    else if (isForSale) {
-      if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="" || salesPrice=="") {
+      document.getElementById("salesprice").value = localStorage.getItem("lastSalePrice");
+
+      const dateString = "2005-06-20T00:00:00.000Z";
+      const originalDate = new Date(dateString);
+
+      // Calculate 1 week before and after the original date
+      const oneWeekBefore = new Date(originalDate.getTime() - 7 * 24 * 60 * 60 * 1000); // Subtracting milliseconds for 1 week
+      const oneWeekAfter = new Date(originalDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Adding milliseconds for 1 week
+
+      // Format the dates as YYYY-MM-DD for the input values
+      const formattedDateBefore = oneWeekBefore.toISOString().split('T')[0];
+      const formattedDateAfter = oneWeekAfter.toISOString().split('T')[0];
+
+      document.getElementById("startdate").value = formattedDateBefore
+      document.getElementById("sellbydate").value = formattedDateAfter
+
+      if (verAPN=="") {
+        console.log('Verification failed');
         setVerified(true);
+        setPopupHeader('Input verification failed');
+        setPopupText('Please check input data');
+        setShowPopup(true);
+      }
+      else if (isForSale) {
+        if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="" || salesPrice=="") {
+          setVerified(true);
+        }
+        else {
+          setVerified(false);
+        }
       }
       else {
-        setVerified(false);
+        if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
+          setVerified(true);
+        }
+        else {
+          setVerified(false);
+        }
       }
-    }
-		else {
-			if (verAmount==0 || verStartdate=="" || verSellbydate=="" ||verSeller=="" || verRealtor=="") {
-        setVerified(true);
-      }
-      else {
-        setVerified(false);
-      }
-		}
 	  }
 
     return (
