@@ -22,9 +22,9 @@ const PopupSuccess = ({ header, text, closeModal, isOpen}) => {
       isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       onClick={handleClose}
       ref={modalRef}>
-      <div className="w-full max-w-md bg-gray-200 rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100 border-2 border-black">
+      <div className="w-full max-w-md bg-white rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100">
       {/* Header text */}
-      <h2 className="text-xl mb-4 flex justify-center text-black">{header}</h2>
+      <h2 className="text-xl mb-4 flex justify-center text-gray-700">{header}</h2>
       {/* Horizontal dividing line */}
       <hr className="border-black my-4" />
       {/* Icon */}

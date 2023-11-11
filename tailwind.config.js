@@ -15,6 +15,11 @@ module.exports = {
         'default-text': '#0089cf',
         'default-bt': '#FFFFFF',
         'default-border' : '#0089cf',
+        'primary-orange': '#FF5722'
+      },
+      fontFamily: {
+        satoshi: ['Satoshi', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

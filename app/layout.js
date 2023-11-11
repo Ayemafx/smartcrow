@@ -1,17 +1,28 @@
-import { Inter } from 'next/font/google'
 import '@/styles/globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+import Nav from "@/comps/Nav"
+import Provider from "@/comps/Provider"
 
 export const metadata = {
-  title: 'Smartcrow',
-  description: 'The new future of escrow contracts!',
-}
+  title: "SmartCrow",
+  description: "Discover & Create Smart Contracts for Real Estate",
+};
 
-export default function RootLayout({ children }) {
-  return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
-  )
-}
+const RootLayout = ({ children }) => (
+  <html lang='en'>
+    <body>
+      <Provider>
+        <div className='main'>
+          <div className='gradient' />
+        </div>
+
+        <main className='app'>
+          <Nav />
+          {children}
+        </main>
+      </Provider>
+    </body>
+  </html>
+);
+
+export default RootLayout;

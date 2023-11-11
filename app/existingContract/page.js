@@ -6,6 +6,9 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import { useSearchParams, useRouter } from 'next/navigation';
 import * as algosdk from 'algosdk'
 import axios from "axios"
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { faMoneyBillTransfer} from '@fortawesome/free-solid-svg-icons';
 
 const peraWallet = new PeraWalletConnect();
 const myabi = {
@@ -447,49 +450,43 @@ const MyPage = () => {
   }
     
     return (
-      <div className="bg-default-bg min-h-screen">
-        <nav className="bg-default-bg p-4">
-          <div className="flex items-center justify-between">
-		  	
-            <a href="/" className="text-white font-bold text-2xl hover:text-gray-300">
-				<img src="/assets/images/logo5.png" alt="Smartcrow logo" className="max-w-xs h-auto " />
-			</a>
-          	
-      <div className="flex flex-col items-end">
-				<button className="bg-default-bt text-default-bt-text font-semibold px-4 py-2 rounded border border-default-border" onClick={isConnectedToPeraWallet ? disconnect : login}>
-				{isConnectedToPeraWallet ? "Disconnect Pera Wallet" : "Connect Pera Wallet"}
-				</button>
-				<p className="text-sm text-gray-500 mt-2">*Connect With Pera Mobile*</p>
-			</div>
-        </div>
-        </nav>
-        <div className="container mx-auto px-4 py-10">
+      <div className="min-h-screen">
+        <div className="mx-auto px-4 py-10">
           <div className="flex flex-col gap-4">
-		  	<div className="flex justify-between items-center">
-            	<h2 className="text-default-text text-2xl font-bold">APN# {APN}</h2>
-				<button className="bg-default-bt text-default-bt-text px-4 py-2 rounded w-42 border border-default-border" onClick={refresh}>
-              		Load/Refresh Info
-            	</button>
-			</div>
+          <div className='container flex flex-row'>
+            <div className='left-side'>
+                <h2 className="text-black text-2xl font-bold">APN Address: </h2>
+                </div>
+              <div className='right-side ml-auto'>
+                <button 
+	                  type="button" 
+	                  onClick={refresh}
+	                  className="refresh_btn flex flex-row-reverse hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/60 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	              <FontAwesomeIcon icon={faArrowsRotate} style={{color: "#ffffff"}} className='' />
+	            </button>
+              </div>
+			      </div>
+      <div>
+      <h1 className="text-default-text text-l font-bold bg-white p-2 border border-sky-200 rounded">{APN}</h1>
+      </div>
 			<textarea
                 id="addresscheck"
-                className="border-gray-300 bg-gray-700 text-white text-center border rounded w-full py-2 px-3 mt-1"
+                className="ml-0 resize-none flex-grow max-w-screen-m h-15 px-4 py-4 text-white bg-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
 				defaultValue={Address}
-                rows={2}
              disabled />
 			
-            <div className="p-6 rounded border border-default-border">
-              <div className="flex  rounded px-2 py-2">
+            <div className="p-6 rounded border border border-sky-200">
+              <div className="flex rounded px-2 py-2">
                 <div className="w-1/2">
                  
-                  <ul className="list-inside text-default-text">
-                    <li>Amount (Algos)</li>
-                    <li>Start date</li>
-                    <li>Sell by</li>
-                    <li>Sender Wallet</li>
-                    <li>Receiver Wallet</li>
-                    <li>Still Active</li>
-                    <li>Sales Price ($)</li>
+                  <ul className="list-inside text-black">
+                    <li>Amount <span className='text-default-text'>(Algos)</span>: </li>
+                    <li>Start date: </li>
+                    <li>Sold by: </li>
+                    <li>Sender Wallet: </li>
+                    <li>Receiver Wallet: </li>
+                    <li>Still Active: </li>
+                    <li>Sales Price <span className='text-default-text'>$</span>: </li>
                   </ul>
                 </div>
                 <div className="w-1/2 text-right text-default-text">
@@ -508,10 +505,10 @@ const MyPage = () => {
             </div>
             <div className="p-6 rounded flex justify-between">
 				<div className="w-full sm:w-1/2 text-center mr-10">
-    				<button className="bg-white border border-default-border hover:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg mb-4" onClick={handleWithdrawSeller}>
-						<img src="/assets/images/sender.png" alt="New File Image" className="h-12 w-12" />
+    				<button className="bg-white border border-sky-200 hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4" onClick={handleWithdrawSeller}>
+            <img src='/assets/images/send.png' className='h-10 w-10'></img>
     				</button>
-    				<p className="text-default-text">Withdraw as Sender</p>
+    				<p className="text-default-text">Withdraw as <span><p>Sender</p></span></p>
   				</div>
 
           {fetching && (
@@ -521,10 +518,10 @@ const MyPage = () => {
           )}
 
 				<div className="w-full sm:w-1/2 text-center mr-10">
-    				<button className="bg-white border border-default-border hover:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg mb-4" onClick={handleWithdrawRealtor}>
-						<img src="/assets/images/receiver.png" alt="New File Image" className="h-12 w-12" />
+        <button className="bg-white border border-sky-200 hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4" onClick={handleWithdrawRealtor}>
+            <img src='/assets/images/receive.png' className='h-10 w-10'></img>
     				</button>
-    				<p className="text-default-text">Withdraw as Receiver</p>
+    				<p className="text-default-text">Withdraw as <span><p>Receiver</p></span></p>
   				</div>
               
             </div>

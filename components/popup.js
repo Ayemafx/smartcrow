@@ -22,7 +22,7 @@ const Popup = ({ header, text, closeModal, isOpen}) => {
       isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       onClick={handleClose}
       ref={modalRef}>
-      <div className="w-full max-w-md bg-gray-200 rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100 border-2 border-black">
+      <div className="w-full max-w-md bg-white rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100 border-2 border-black">
       {/* Icon */}
       <div className="flex justify-center text-center mb-4">
         <img src="/assets/images/error.png" alt="Paste Image" className="h-7 w-7" /> 

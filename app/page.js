@@ -6,6 +6,9 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import * as algosdk from 'algosdk'
 import _fetch from 'isomorphic-fetch';
 import dotenv from 'dotenv';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+
 
 const peraWallet = new PeraWalletConnect();
 const myabi = {
@@ -123,8 +126,7 @@ const myabi = {
     "networks": {}
 }
 
-
-export default function Home() {
+const Home = () => {
 	const [showBalloon,setShowBalloon] = useState(false);
 	const [balloonText,setBalloonText] = useState("");
 	const [buttonNewContract,setbuttonNewContract] = useState(true);
@@ -291,67 +293,81 @@ export default function Home() {
 	} 
 
   return (
-    <div className="bg-default-bg min-h-screen">
-		<header className="flex items-center justify-between px-8 py-4">
-			<img src="/assets/images/logo5.png" alt="Smartcrow logo" className="max-w-xs h-auto" />
-			<div className="flex flex-col items-end">
-				<button className="bg-default-bt text-default-bt-text font-semibold px-4 py-2 rounded border border-default-border" onClick={isConnectedToPeraWallet ? disconnect : login}>
-				{isConnectedToPeraWallet ? "Disconnect Pera Wallet" : "Connect Pera Wallet"}
-				</button>
-				<p className="text-sm text-gray-500 mt-2">*Connect With Pera Mobile*</p>
-			</div>
-		</header>
-		<main className="flex flex-col items-center justify-center py-16">
-		  <section className="text-default-text text-center mb-8">
-			
-			<h1 className="text-default-text text-xl font-bold">Please enter your APN ID</h1>
-		  </section>
-		  <section className="flex items-center mb-8">
-			<input
-			  type="text"
-			  id="myAPNInput"
-			  className="w-60 bg-default-bg rounded px-4 py-2 focus:outline-none m-2 border border-default-border"
-			  placeholder="Paste APN here..."
-			/>
+<section className='contract-wrapper'>
+	<div className='mb-2 pb-20 container flex space-between flex-end'>
+		<div className='flex-col flex-start pt-4 pb-0 contract-left'>
+		<section className="text-left mb-4">
+      <h1 className="text-xl font-bold m-2">Please Enter Your APN ID</h1>
+    </section>
+    <section className="flex mb-8">
+      <input
+        type="text"
+        id="myAPNInput"
+        className="w-60 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input"
+        placeholder="Enter APN" required
+      />
+	   <button
+                  type='button'
+                  className='my-2 blue_btn about px-4 py-2'
+				  onClick={checkaddress}
+                >
+                  Check Address
+                </button>
+	<button 
+	type="button" 
+	onClick={handleClickBalloon}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+	
+    <section className="flex-start mb-6 mt-0 w-120">
+      <textarea
+        id="addresscheck"
+        className="resize-none m-2 sm:w-96 h-15 px-4 py-4 text-white bg-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+        disabled
+        placeholder="Address Will Display Here"
+      ></textarea>
+    </section>
+    <section className="flex-start">
+      <div className="w-full sm:w-1/2 text-center mr-10 m-2">
+        <button
+          className={` hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4  border border-sky-200 ${buttonNewContract ? 'bg-white cursor-not-allowed' : 'bg-white'}`}
+          onClick={handleNewContract}
+          disabled={buttonNewContract}
+        >
+          <img src="/assets/images/newfile.png" alt="New File Image" className="h-12 w-12" />
+        </button>
+        <p className="text-default-text">New <span><p>Contract</p></span></p>
+      </div>
+      <div className="w-full sm:w-1/2 text-center m-2">
+        <button
+          className={` hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4  border border-sky-200 ${buttonExistingContract ? 'bg-white cursor-not-allowed' : 'bg-default-bg'}`}
+          onClick={handleExistingContract}
+          disabled={buttonExistingContract}
+        >
+          <img src="/assets/images/existingfile.png" alt="Existing File Image" className="h-12 w-12" />
+        </button>
+        <p className="text-default-text">Existing <span><p>Contract</p></span></p>
+      </div>
+    </section>
+    <footer className="flex justify-start pt-5">
+      <a href="https://www.smartcrow.info" className="m-2 font-semibold text-default-bt-text hover:underline">
+        About Us
+      </a>
+    </footer>
+	{showBalloon && <PopupInfo text={balloonText} closeModal={handleCloseBalloon} isOpen={showBalloon} />}
+		</div>
 
-			</section>
-			<section className="flex items-center mb-8">
-			<button
-			  className="bg-default-bt text-default-bt-text font-semibold px-4 py-2 rounded-full border border-default-border"
-			  onClick={checkaddress}
-			>
-			  Check Address
-			</button>
-			<button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full m-2" onClick={handleClickBalloon}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
-			
-		  </section>
-		  <section className="flex items-center mb-6">
-		  	<textarea id="addresscheck" className="resize-none sm:w-96 h-15 px-4 py-4 text-white bg-gray-700 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center" disabled placeholder='Address Will Display Here'></textarea>
-		  </section>
-		  <section className="flex justify-center">
-		  	<div className="w-full sm:w-1/2 text-center mr-10">
-    			<button className={` hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4  border border-default-border ${buttonNewContract? 'bg-gray-300 cursor-not-allowed' : 'bg-white'}`} onClick={handleNewContract} disabled={buttonNewContract}>
-					<img src="/assets/images/newfile.png" alt="New File Image" className="h-12 w-12" />
-    			</button>
-    			<p className="text-default-text">New Contract</p>
-				
-  			</div>
-  			<div className="w-full sm:w-1/2 text-center">
-    			<button className={` hover:bg-gray-200 text-white font-semibold py-3 px-6 rounded-lg mb-4  border border-default-border ${buttonExistingContract? 'bg-gray-300 cursor-not-allowed' : 'bg-default-bg'}`} onClick={handleExistingContract} disabled={buttonExistingContract}>
-					<img src="/assets/images/existingfile.png" alt="Existing File Image" className="h-12 w-12" />
-    			</button>
-    			<p className="text-default-text">Existing Contract</p>
-  			</div>
-		  </section>
-		  <footer className="flex justify-center pt-5">
-			<a href='https://www.smartcrow.info' className='font-semibold text-default-bt-text'>About Us</a>
-		  </footer>
-		</main>
-		{showBalloon && (
-      <PopupInfo text={balloonText} closeModal={handleCloseBalloon} isOpen={showBalloon}/>
-    )}
-	  </div>
+		<div className='flex justify-center contract-right'>
+			<div className='image-container overflow-hidden ml-40'>
+				<img src='/assets/images/reals.jpg' className="border border-gray-500 opacity-85" style={{width: "30rem", height: "35rem", borderRadius: "15rem 15rem 0 0"}}></img>
+			</div>
+		</div>
+
+	</div>
+</section>
   )
 }
+
+export default Home;

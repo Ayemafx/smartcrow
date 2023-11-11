@@ -2,6 +2,7 @@
 "use client";
 import React, { useRef } from "react";
 import { useState } from 'react';
+import { ReactSVG } from 'react-svg';
 
 const PopupInfo = ({text, closeModal, isOpen}) => {
 
@@ -22,9 +23,13 @@ const PopupInfo = ({text, closeModal, isOpen}) => {
       isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       onClick={handleClose}
       ref={modalRef}>
-      <div className="w-full max-w-md bg-gray-400 rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100 border-2 border-black">
+      <div className="w-full max-w-md max-h-screen bg-white rounded-lg p-4 transform transition-all duration-300 opacity-100 scale-100">
       {/* Header text */}
-      <h2 className="text-m  mb-4 flex justify-center text-black">{text}</h2>
+      <h1 className="text-h text-gray-700 font-bold flex justify-center">Follow Below Instructions</h1>
+      <div>
+      <ReactSVG src="/assets/images/moreinfo.svg" className="mb-5" />
+      <h3 className="text-m text-gray-700 m-2">{text}</h3>
+      </div>
     </div>
   </div>
       

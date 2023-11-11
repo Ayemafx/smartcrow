@@ -6,6 +6,8 @@ import PopupSuccess from '@/components/popupsuccess';
 import PopupInfo from '@/components/popupinfo';
 import { PeraWalletConnect } from "@perawallet/connect";
 import * as algosdk from 'algosdk'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 
 const peraWallet = new PeraWalletConnect();
 const myabi = {
@@ -342,96 +344,119 @@ const MyForm = () => {
 	  }
 
     return (
-      <div className="bg-default-bg min-h-screen">
-        <nav className="flex justify-between items-center bg-default-bg p-4">
-		<a href="/" className="text-white font-bold text-2xl hover:text-gray-300">
-			<img src="/assets/images/logo5.png" alt="Smartcrow logo" className="max-w-xs h-auto " /> 
-		</a>
-		  <p className="text-default-text font-bold text-sm md:text-lg">New Contract</p>
-          <div className="flex flex-col items-end">
-				<button className="bg-default-bt text-default-bt-text font-semibold px-4 py-2 rounded border border-default-border" onClick={isConnectedToPeraWallet ? disconnect : login}>
-				{isConnectedToPeraWallet ? "Disconnect Pera Wallet" : "Connect Pera Wallet"}
-				</button>
-				<p className="text-sm text-gray-500 mt-2">*Connect With Pera Mobile*</p>
-			</div>
+      <div className="min-h-screen">
+        <nav className="flex justify-between items-center">
+		  <p className="text-black font-bold text-sm md:text-lg m-2">New Contract</p>
         </nav>
         <div className="container mx-auto pb-3">
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="parcelid" className="font-bold mr-4 w-24 text-default-text">
-                APN
-              </label>
-              <input
-                type="text"
-                id="parcelid"
-                className="border-default-border border rounded py-2 px-3 mt-1 max-w-screen-sm flex-grow"
-				defaultValue={SelAPN}
+            
+            <section className="flex mb-8">
+      <input
+        type="text"
+        id="parcelid"
+        className="m-2 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input max-w-screen-sm flex-grow"
+        defaultValue={SelAPN}
 				onChange={handleChange}
-              />
-            </div>
-            <div className="flex items-center flex-row p-2">
-			<label htmlFor="parcelid" className="font-bold mr-4 w-24 text-default-text">
-                
-              </label>
-              <textarea
-                id="addresscheck"
-                className="border-gray-300 bg-gray-700 text-white text-center border rounded flex-grow max-w-screen-sm py-2 px-3 mt-1"
-				defaultValue={Address}
-                rows={2}
-				disabled
-              />
-            </div>
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="bonusamount" className="font-bold mr-4 w-24 text-default-text">
+        placeholder="APN"
+      />
+	<button 
+	type="button" 
+	onClick={handleClickBalloon}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+      <section className="flex-start m-2 mt-0">
+      <textarea
+        id="addresscheck"
+        className="ml-0 resize-none flex-grow max-w-screen-m h-15 px-4 py-4 text-white bg-gray-800 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+        disabled
+        defaultValue={Address}
+      ></textarea>
+    </section>
+
+      {/*amount algo*/}
+      <label htmlFor="bonusamount" className="font-bold mr-4 m-2 text-black">
                 Amount (ALGO)
-              </label>
-              <input
-                type="number"
-				inputMode='numeric'
-                id="bonusamount"
-                min="0"
-                className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
-				onChange={handleChange}
-              />
-			  <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
-            </div>
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="startdate" className="font-bold mr-4 w-24 text-default-text">
+      </label>
+      <section className="flex mb-8">
+        
+      <input
+        type="number"
+        placeholder='0'
+        inputMode='numeric'
+        id="bonusamount"
+        min="0"
+        className="w-60 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input max-w-screen-sm flex-grow"
+        onChange={handleChange}
+      />
+	<button 
+	type="button" 
+	onClick={handleClickBalloon}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+
+
+  {/*dates*/}
+
+  <div className='container flex flex-row'>
+        <div className='left-date'>
+        <label htmlFor="bonusamount" className="font-bold m-2 text-black">
                 Start Date
-              </label>
-              <input
-                type="date"
-                id="startdate"
-                className="border-default-border border rounded py-2 px-3 mt-1 max-w-screen-sm flex-grow"
-                defaultValue={today}
-				onChange={handleChange}
-              />
-			  <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon2}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
+      </label>
+      <div className="flex items-center flex-row p-2">
+      <section className="flex mb-8">
+        
+      <input
+        type="date"
+        id="startdate"
+        className="max-w-screen-m flex-grow py-2 px-3 mt-1 w-60 bg-default-bg rounded focus:outline-offset-0 outline-sky-200 border APN_input"
+        defaultValue={today}
+        onChange={handleChange}
+      />
+	<button 
+	onClick={handleClickBalloon2}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+  </div>
+        </div>
 
-            </div>
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="sellbydate" className="font-bold mr-4 w-24 text-default-text">
-                Sell By
-              </label>
-              <input
-                type="date"
-                id="sellbydate"
-                className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
-				onChange={handleChange}
-              />
-			  <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon3}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			  </button>
-          </div>
+        <div className='right-date ml-12'>
+          
+      <label htmlFor="bonusamount" className="font-bold m-2 text-black">
+                Sold By
+      </label>
+      <div className="flex items-center flex-row p-2">
+      <section className="flex mb-8">
+        
+      <input
+        type="date"
+        id="sellbydate"
+        className="max-w-screen-m flex-grow py-2 px-3 mt-1 w-60 bg-default-bg rounded focus:outline-offset-0 outline-sky-200 border APN_input"
+        defaultValue={today}
+        onChange={handleChange}
+      />
+	<button 
+	onClick={handleClickBalloon3}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+        </section>
+      </div>
+    </div>
+</div>
 
+
+{/*Add Sales Price*/}
+<label htmlFor="bonusamount" className="font-bold m-2 text-black">Add Sales Price: </label>
           <div className="flex items-center flex-row p-2">
-            <label className="font-bold mr-4 w-24 text-default-text">Add Sales Price?</label>
             <div className="flex items-center">
-              <label className="mr-2">
+              <label className="mr-10 m-2">
                 <input
                   type="radio"
                   id="yes"
@@ -463,56 +488,68 @@ const MyForm = () => {
             </div>
           </div>
 
+{/*Sales Price*/}
+ <label htmlFor="bonusamount" className="font-bold mt-4 m-2 text-black">
+                Sales Price greater than equals to:
+      </label>
+      <section className="flex mb-8">
+        
+      <input
+        type="number"
+        inputMode='numeric'
+        id="salesprice"
+        min="0"
+        className="w-60 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input max-w-screen-sm flex-grow"
+        onChange={handleChange}
+        disabled={!isForSale}
+      />
+	<button 
+	type="button" 
+	onClick={handleClickBalloon6}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
 
-              <div className="flex items-center flex-row p-2">
-                <label htmlFor="salesprice" className="font-bold mr-4 w-30 text-default-text">
-                  Sales Price ≥
-                </label>
-                <input
-                  type="number"
-                  id="salesprice"
-                  className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
-                  onChange={handleChange}
-                  disabled={!isForSale}
-                />
-          <button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon6}>
-            <img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-          </button>
-            </div>
-            
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="senderwallet" className="font-bold mr-4 w-24 text-default-text">
-                Sender Wallet
-              </label>
-              <input
-                type="text"
-                id="senderwallet"
-                className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
-				onChange={handleChange}
-              />
-			  
-			<button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon4}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
-            </div>
-            <div className="flex items-center flex-row p-2">
-              <label htmlFor="receiverwallet" className="font-bold mr-4 w-24 text-default-text">
-                Receiver Wallet
-              </label>
-              <input
-                type="text"
-                id="receiverwallet"
-                className="border-default-border border rounded max-w-screen-sm flex-grow py-2 px-3 mt-1"
-				onChange={handleChange}
-              />
-			  
-			<button className="bg-white text-blue-500 font-semibold px-2 py-2 rounded-full mr-2" onClick={handleClickBalloon5}>
-			  	<img src="/assets/images/info.png" alt="Paste Image" className="h-5 w-5" /> 
-			</button>
-            </div>
+{/*Sender Wallet*/}
+<label htmlFor="senderwallet" className="font-bold mr-4 m-2 text-black">Sender Wallet</label>
+      <section className="flex mb-8">
+      <input
+        type="text"
+        id="senderwallet"
+        placeholder='1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        className="w-60 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input max-w-screen-sm flex-grow"
+        onChange={handleChange}
+      />
+	<button 
+	type="button" 
+	onClick={handleClickBalloon4}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+
+{/*Receiver Wallet*/}
+<label htmlFor="receiverwallet" className="font-bold mr-4 m-2 text-black">Receiver Wallet</label>
+      <section className="flex mb-8">
+      <input
+        type="text"
+        id="receiverwallet"
+        placeholder='1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        className="w-60 bg-default-bg rounded px-3 py-2 focus:outline-offset-0 outline-sky-200 m-2 border APN_input max-w-screen-sm flex-grow"
+        onChange={handleChange}
+      />
+	<button 
+	type="button" 
+	onClick={handleClickBalloon5}
+	className="info_btn m-2 about hover:bg-[#000000]/90 focus:outline-none focus:ring-[#000000]/50 inline-flex items-center hover:text-[#ffffff] dark:focus:ring-[#000000]/55">
+	<FontAwesomeIcon icon={faCircleInfo} style={{ color: "#ffffff" , fontSize: '12px'}} className='m-2 py-0' />
+	</button>
+    </section>
+
             <div className="p-6 flex items-center justify-center">
 				
-                <button className={`py-2 px-4 rounded ${
+                <button className={`create_blue_btn py-2 px-4 rounded ${
         verificationfailed ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-default-bt text-default-bt-text hover:bg-gr-200 border border-default-border'
       }`} disabled={verificationfailed} onClick={createbonusfunc}>
 		  	        Create Contract
